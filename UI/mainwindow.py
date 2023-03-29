@@ -2,17 +2,20 @@
 
 import sys
 
-from PyQt6 import QtCore
-# from PyQt6 import QtGui as
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QToolBar
-from PyQt6.QtWidgets import QFormLayout, QLineEdit, QWidget
+from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QToolBar, \
+    QVBoxLayout, QLabel, QFormLayout, QLineEdit, QWidget, QScrollBar, \
+    QScrollArea
 
 
 class MyApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
+
+        # Задаем константы
+        self.MIN_WIDTH_WINDOW = 470
 
         self.initUI()
 
@@ -25,7 +28,8 @@ class MyApp(QMainWindow):
         #  Параметры окна
         self.setGeometry(300, 300, 350, 250)
         self.setWindowTitle("Расчет ДЗ")
-        self.setWindowIcon(QIcon(r"icons\star.png"))
+        self.setWindowIcon(QIcon("icons/star.png"))
+        self.setMinimumWidth(self.MIN_WIDTH_WINDOW)
 
         # Поля ввода данных.
         # Поля для параметров пластины
@@ -56,57 +60,119 @@ class MyApp(QMainWindow):
         self.coeff_avr_pressure_edit = QLineEdit()
         self.coeff_stream_dim_extension_edit = QLineEdit()
 
-        # Добавляем поля ввода в Layout.
+        # Создаем форму ввода данных
+        form_layout = QFormLayout()
+
+        # Добавляем поля ввода в часть форму.
         # Добавляем поля пластины
-        formLayout = QFormLayout()
-        formLayout.addRow(self.tr("&Эмпирический коэффициент:"),
-                          self.coeff_nu_edit)
-        formLayout.addRow(self.tr("&Толщина пластины (лицевой):"),
-                          self.pl_front_thickness_edit)
-        formLayout.addRow(self.tr("&Толщина пластины (тыльной):"),
-                          self.pl_back_thickness_edit)
-        formLayout.addRow(self.tr("&Угол между КС и нормалью к пластине:"),
-                          self.angle_edit)
-        formLayout.addRow(self.tr("&Плотность материала пластины (лицевой)"),
-                          self.pl_front_density_edit)
-        formLayout.addRow(self.tr("&плотность материала пластины (тыльной)"),
-                          self.pl_back_density_edit)
-        formLayout.addRow(self.tr("&Динамический предел текучести материала "
-                                  "пластины"), self.pl_lim_fluidity_edit)
-        formLayout.addRow(self.tr("&Длина пластины"),
-                          self.pl_length_edit)
-        formLayout.addRow(self.tr("&Ширина пластины"),
-                          self.pl_width_edit)
+        form_layout.addRow(self.tr("&Эмпирический коэффициент:"),
+                           self.coeff_nu_edit)
+        form_layout.addRow(self.tr("&Толщина пластины (лицевой):"),
+                           self.pl_front_thickness_edit)
+        form_layout.addRow(self.tr("&Толщина пластины (тыльной):"),
+                           self.pl_back_thickness_edit)
+        form_layout.addRow(self.tr("&Угол между КС и нормалью к пластине:"),
+                           self.angle_edit)
+        form_layout.addRow(self.tr("&Плотность материала пластины (лицевой)"),
+                           self.pl_front_density_edit)
+        form_layout.addRow(self.tr("&плотность материала пластины (тыльной)"),
+                           self.pl_back_density_edit)
+        form_layout.addRow(self.tr("&Динамический предел текучести материала пластины"),
+                           self.pl_lim_fluidity_edit)
+        form_layout.addRow(self.tr("&Длина пластины"),
+                           self.pl_length_edit)
+        form_layout.addRow(self.tr("&Ширина пластины"),
+                           self.pl_width_edit)
+
         # Добавляем поля ВВ
-        formLayout.addRow(self.tr("&Толщина слоя ВВ"),
-                          self.explosive_layer_height_edit)
-        formLayout.addRow(self.tr("&Плотность ВВ"),
-                          self.explosive_density_edit)
-        formLayout.addRow(self.tr("&Скорость детонации заряда ВВ"),
-                          self.detonation_velocity_edit)
-        formLayout.addRow(self.tr("&Критический диаметр детонации ВВ"),
-                          self.crit_dim_detonation_edit)
-        formLayout.addRow(self.tr("&плотность материала КС"),
-                          self.stream_density_edit)
-        formLayout.addRow(self.tr("&динамический предел текучести материала "
-                                  "КС"), self.stream_lim_fluidity_edit)
+        form_layout.addRow(self.tr("&Толщина слоя ВВ"),
+                           self.explosive_layer_height_edit)
+        form_layout.addRow(self.tr("&Плотность ВВ"),
+                           self.explosive_density_edit)
+        form_layout.addRow(self.tr("&Скорость детонации заряда ВВ"),
+                           self.detonation_velocity_edit)
+        form_layout.addRow(self.tr("&Критический диаметр детонации ВВ"),
+                           self.crit_dim_detonation_edit)
+        # Добавляем поля струи
+        form_layout.addRow(self.tr("&плотность материала КС"),
+                           self.stream_density_edit)
+        form_layout.addRow(self.tr("&динамический предел текучести материала""КС"),
+                           self.stream_lim_fluidity_edit)
+        form_layout.addRow(self.tr("&диаметр КС"),
+                           self.stream_dim_edit)
+        form_layout.addRow(self.tr("&скорость КС"),
+                           self.stream_velocity_edit)
 
-        formLayout.addRow(self.calculate_btn)
+        # Добавляем остальные параметры
+        form_layout.addRow(self.tr("&Показатель политропы продуктов детонации"),
+                           self.polytropy_index_edit)
+        form_layout.addRow(self.tr("&Давление детонации"),
+                           self.detonation_pressure_edit)
 
+        # Устанавливаем заголовок для двух общих параметров кси
+        form_layout.addRow(QLabel("Параметры, определяющие распределение скоростей продуктов детонации:"))
+        form_layout.addRow(self.tr("\u03BEz"), self.ksi_z_edit)
+        form_layout.addRow(self.tr("\u03BEr"), self.ksi_r_edit)
+        form_layout.addRow(self.tr("&Коэффициент для среднего давления"),
+                           self.coeff_avr_pressure_edit)
+        form_layout.addRow(self.tr("&Коэффициент увеличения диаметра КС"),
+                           self.coeff_stream_dim_extension_edit)
 
+        # Устанавливаем выравнивание подписей полей по правому краю
+        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        # Создаем область прокрутки формы
+        form_scroll_area = QScrollArea()
+        form_scroll_area.setWidgetResizable(True)
+        form_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        # Добавляем верхнюю часть формы во внешний контейнер
+        # main_layout.addLayout(form_layout)
+
+        # Инструкция устанавливает все подписи над полями заполнения
+        # (висит для справки)
+        # formLayout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
+
+        # Создаем нижнюю часть формы
+
+        # Добавляем верхнюю часть формы во внешний контейнер
+        # main_layout.addLayout(bottom_form_layout)
+
+        # Ограничиваем растяжение форм при помощи растягиваемого контейнера
+        # снизу всех форм ввода
+        # main_layout.addStretch()
+
+        # Устанавливаем форму на главное окно
+        widget = QWidget()
+        widget.setLayout(form_layout)
+        form_scroll_area.setWidget(widget)
+        self.setCentralWidget(form_scroll_area)
 
         # Добавляем toolbar на главное окно
         self.addToolBar(self.create_toolbar())
-        self
-
-
-        widget = QWidget()
-        widget.setLayout(formLayout)
-        self.setCentralWidget(widget)
 
         self.show()
 
-    def create_toolbar(self):
+    def create_joint_label_form(self, head_name: str,
+                                *par_names: str) -> QVBoxLayout:
+        """Принимает заголовок формы и ее элементы.
+        Возвращает контейнер QVBoxLayout со всеми переданными компонентами
+        """
+        container = QVBoxLayout()
+        # container.addStretch()
+
+        heading = QLabel(head_name)
+        container.addWidget(heading)
+
+        bottom_form = QFormLayout()
+        for par_name in par_names:
+            bottom_form.addRow(self.tr(f'&{par_name}'), QLineEdit())
+        container.addLayout(bottom_form)
+
+        return container
+
+
+    def create_toolbar(self) -> QToolBar:
         # self.toolbar = self.addToolBar('Exit')
 
         # Создаем объект toolbar
