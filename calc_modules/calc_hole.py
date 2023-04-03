@@ -9,6 +9,7 @@ __version__ = 1.0
 
 import math as mt
 from math import sqrt
+from objects.parametrs import InData
 
 
 def calc_diam_inf(stream_diam, pl_dens, stream_dens,
@@ -84,9 +85,36 @@ def calc_pen_rate(pl_dens, stream_dens, stream_speed):
     pen_speed = (lamb * stream_speed) / (1 + lamb)
 
 
-def do_main(pl_dens, stream_dens, stream_speed, coeff_nu, pl_thickness, ):
-    pen_speed_stream = calc_pen_rate()
+def do_main(data: InData) -> float:
+    j2 = data.coeff_nu
+    j3 = data.pl_front_thickness
+    j5 = data.angle
+    j6 = data.pl_front_density
+    j8 = data.pl_lim_fluidity
+    j15 = data.stream_density
+    j17 = data.stream_dim
+    j18 = data.stream_velocity
+    m2 = j3 / 1000
+    m4 = (sqrt(_C_("Sheet1!M13") / _C_("Sheet1!M11")) / (
+                1 + sqrt(_C_("Sheet1!M13") / _C_("Sheet1!M11")))) * _C_(
+        "Sheet1!M17")
+    Sheet1!M5: = cos((_C_("Sheet1!J5") * pi) / 180)
+    Sheet1!M8: = (_C_("Sheet1!J2") * _C_("Sheet1!M2")) / (
+                _C_("Sheet1!M4") * _C_("Sheet1!M5"))
+    Sheet1!M9: = sqrt((_C_("Sheet1!M10") ** 2) - ((sqrt(
+        (_C_("Sheet1!M10") ** 2) - (_C_("Sheet1!M16") ** 2)) - ((2 * _C_(
+        "Sheet1!M8"))
+                                                                * sqrt(
+                _C_("Sheet1!M14") / _C_("Sheet1!M11")))) ** 2))
+    Sheet1!M10: = (sqrt(_C_("Sheet1!M11") * _C_("Sheet1!M13")) / (
+                sqrt(2 * _C_("Sheet1!M14")) * (
+                    sqrt(_C_("Sheet1!M13")) + sqrt(_C_("Sheet1!M11")))))
+    *(_C_("Sheet1!M16") * _C_("Sheet1!M17"))
 
-    time_pen = calc_time_pen()
 
-    return calc_max_hole()
+    Sheet1!M11: = _C_("Sheet1!J6") * 1000
+    Sheet1!M13: = _C_("Sheet1!J15") * 1000
+    Sheet1!M14: = _C_("Sheet1!J8") * 1000000
+    Sheet1!M16: = _C_("Sheet1!J17") / 1000
+    Sheet1!M17: = _C_("Sheet1!J18") * 1000
+    Sheet1!U4: = _C_("Sheet1!M9") * 1000
