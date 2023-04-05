@@ -8,13 +8,13 @@ __version__ = 1.0
 """
 
 import math as mt
-from math import sqrt
+from math import sqrt, cos
 from objects.parametrs import InData
 
 
 def calc_diam_inf(stream_diam, pl_dens, stream_dens,
                   pl_lim_fluidity, stream_speed):
-    """Возвращает диаметр отверстия в полубесконечной приграде
+    """Возвращает диаметр отверстия в полубесконечной приграде [м]
 
     :param stream_diam: диаметр струи [м]
     :param pl_dens: плотность материала пластины (лицевой) [кг/м3]
@@ -84,8 +84,20 @@ def calc_pen_rate(pl_dens, stream_dens, stream_speed):
     lamb = sqrt(stream_dens / pl_dens)
     pen_speed = (lamb * stream_speed) / (1 + lamb)
 
+    return pen_speed
+
 
 def do_main(data: InData) -> float:
+    """Главная функция. Рассчитывает диаметр отверстия в пластине. Остальные
+    функции по факту не нужны!
+
+    :param data: класс в котором хранятся входные данные расчета
+
+    :rtype: float
+    :return: диаметр отверстия в пластине [м]
+    """
+
+    #
     j2 = data.coeff_nu
     j3 = data.pl_front_thickness
     j5 = data.angle
@@ -94,27 +106,18 @@ def do_main(data: InData) -> float:
     j15 = data.stream_density
     j17 = data.stream_dim
     j18 = data.stream_velocity
+
+    m11 = j6 * 1000
+    m13 = j15 * 1000
+    m14 = j8 * 1000000
+    m16 = j17 / 1000
+    m17 = j18 * 1000
+
     m2 = j3 / 1000
-    m4 = (sqrt(_C_("Sheet1!M13") / _C_("Sheet1!M11")) / (
-                1 + sqrt(_C_("Sheet1!M13") / _C_("Sheet1!M11")))) * _C_(
-        "Sheet1!M17")
-    Sheet1!M5: = cos((_C_("Sheet1!J5") * pi) / 180)
-    Sheet1!M8: = (_C_("Sheet1!J2") * _C_("Sheet1!M2")) / (
-                _C_("Sheet1!M4") * _C_("Sheet1!M5"))
-    Sheet1!M9: = sqrt((_C_("Sheet1!M10") ** 2) - ((sqrt(
-        (_C_("Sheet1!M10") ** 2) - (_C_("Sheet1!M16") ** 2)) - ((2 * _C_(
-        "Sheet1!M8"))
-                                                                * sqrt(
-                _C_("Sheet1!M14") / _C_("Sheet1!M11")))) ** 2))
-    Sheet1!M10: = (sqrt(_C_("Sheet1!M11") * _C_("Sheet1!M13")) / (
-                sqrt(2 * _C_("Sheet1!M14")) * (
-                    sqrt(_C_("Sheet1!M13")) + sqrt(_C_("Sheet1!M11")))))
-    *(_C_("Sheet1!M16") * _C_("Sheet1!M17"))
+    m4 = (sqrt(m13 / m11) / (1 + sqrt(m13 / m11))) * m17
+    m5 = cos((j5 * mt.pi) / 180)
+    m8 = (j2 * m2) / (m4 * m5)
+    m10 = (sqrt(m11 * m13) / (sqrt(2 * m14) * (sqrt(m13) + sqrt(m11)))) * (m16 * m17)
+    m9 = sqrt((m10 ** 2) - ((sqrt((m10 ** 2) - (m16 ** 2)) - ((2 * m8) * sqrt(m14 / m11))) ** 2))
 
-
-    Sheet1!M11: = _C_("Sheet1!J6") * 1000
-    Sheet1!M13: = _C_("Sheet1!J15") * 1000
-    Sheet1!M14: = _C_("Sheet1!J8") * 1000000
-    Sheet1!M16: = _C_("Sheet1!J17") / 1000
-    Sheet1!M17: = _C_("Sheet1!J18") * 1000
-    Sheet1!U4: = _C_("Sheet1!M9") * 1000
+    return m9
