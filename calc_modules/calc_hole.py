@@ -4,7 +4,7 @@ IMPORT
 
 __autor__ = Tsib_4NR
 
-__version__ = 1.0
+__version__ = 1.1
 """
 
 import math as mt
@@ -12,7 +12,7 @@ from math import sqrt, cos
 from objects.parametrs import InData
 
 
-def calc_diam_inf(stream_diam, pl_dens, stream_dens,
+def _calc_diam_inf(stream_diam, pl_dens, stream_dens,
                   pl_lim_fluidity, stream_speed):
     """Возвращает диаметр отверстия в полубесконечной приграде [м]
 
@@ -33,7 +33,7 @@ def calc_diam_inf(stream_diam, pl_dens, stream_dens,
     return inf_dim_hole
 
 
-def calc_max_hole(stream_diam_inf, stream_diam,
+def _calc_max_hole(stream_diam_inf, stream_diam,
                   time_pen, pl_lim_fluidity, pl_dens):
     """Возвращает максимальный диаметр отверстия в пластине [м]
 
@@ -54,7 +54,7 @@ def calc_max_hole(stream_diam_inf, stream_diam,
     return max_hole_dim
 
 
-def calc_time_pen(coeff, pl_thick, pen_rate, angle):
+def _calc_time_pen(coeff, pl_thick, pen_rate, angle):
     """Возвращает время пробития пластины [с]
 
     :param coeff: эмпирический коэффициент [б/р]
@@ -71,7 +71,7 @@ def calc_time_pen(coeff, pl_thick, pen_rate, angle):
     return pen_time
 
 
-def calc_pen_rate(pl_dens, stream_dens, stream_speed):
+def _calc_pen_rate(pl_dens, stream_dens, stream_speed):
     """Возвращает скорость проникновения кумулятивой струи
 
     :param pl_dens: плотность материала пластины (лицевой) [кг/м3]
@@ -79,7 +79,7 @@ def calc_pen_rate(pl_dens, stream_dens, stream_speed):
     :param stream_speed: скорость струи [м]
 
     :rtype: float
-    :return: скорость проникновения струи [м]
+    :return: скорость проникновения струи [м/c]
     """
     lamb = sqrt(stream_dens / pl_dens)
     pen_speed = (lamb * stream_speed) / (1 + lamb)
@@ -97,7 +97,6 @@ def do_main(data: InData) -> float:
     :return: диаметр отверстия в пластине [м]
     """
 
-    #
     j2 = data.coeff_nu
     j3 = data.pl_front_thickness
     j5 = data.angle
