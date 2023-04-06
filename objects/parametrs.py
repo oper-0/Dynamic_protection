@@ -46,7 +46,7 @@ class InData:
         :param coeff_avr_pressure:
         :param coeff_stream_dim_extension:
         :param coeff_nu: эмпирический коэффициент
-        :param pl_front_thickness: толщина пластины
+        :param pl_front_thickness: толщина пластины (лицевой)
         """
         self.coeff_nu = coeff_nu
         self.pl_front_thickness = pl_front_thickness

@@ -108,7 +108,7 @@ def do_main(data: InData) -> float:
 
     m11 = j6 * 1000
     m13 = j15 * 1000
-    m14 = j8 * 1000000
+    m14 = j8 * 1e6
     m16 = j17 / 1000
     m17 = j18 * 1000
 

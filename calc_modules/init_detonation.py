@@ -32,6 +32,7 @@ def _calc_inequality(data: InData) -> float:
 
     return m21
 
+
 def _calc_pen_rate(data: InData) -> float:
     """Возвращает скорость проникновения кумулятивой струи
 
@@ -40,8 +41,14 @@ def _calc_pen_rate(data: InData) -> float:
         :rtype: float
         :return: скорость проникновения струи [м/c]
     """
-    lamb = sqrt(data.stream_density / data.pl_front_density)
-    pen_speed = (lamb * data.stream_velocity) / (1 + lamb)
+    # Получаем данные из класса InData
+    # Плотность задаем в
+    stream_density = data.stream_density * 1000
+    pl_front_density = data.pl_front_density * 1000
+    stream_velocity = data.stream_velocity * 1000
+
+    lamb = sqrt(stream_density / pl_front_density)
+    pen_speed = (lamb * stream_velocity) / (1 + lamb)
 
     return pen_speed
 
@@ -54,8 +61,11 @@ def do_main(data: InData) -> float:
     :rtype: float
     :return: время инициирования детонации [с]
     """
+    # Получаем данные из класса InData
+    explosive_layer_height = data.explosive_layer_height
+
     # Задаем толщину ВВ в м
-    explosive_height = data.explosive_layer_height / 1000
+    explosive_height = explosive_layer_height / 1000
     # Вычисляем неравенство
     ineq = _calc_inequality(data)
     # Определяем время инициирования для тонкого слоя ВВ
@@ -65,6 +75,8 @@ def do_main(data: InData) -> float:
     # Если слой не тонкий или время инициирования ВВ меньше 1 мкс, то необходимо
     # пересчитать время для толстого слоя ВВ
     if not ((explosive_height >= ineq) and (init_detonation_time <= 1e-6)):
-        init_detonation_time = explosive_height / data.detonation_velocity
+        detonation_velocity = data.detonation_velocity
+
+        init_detonation_time = explosive_height / detonation_velocity
 
     return init_detonation_time
