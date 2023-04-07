@@ -73,5 +73,17 @@ class InData:
         self.coeff_stream_dim_extension = coeff_stream_dim_extension
 
 
-
-
+class DPPlate:
+    def __init__(self, asymmetric_speed: dict = None,
+                 acceleration_time: float = None,
+                 rotation_angle: float = None) -> None:
+        """Объект хранит расчетные параметры пластины динамической защиты.
+        :param asymmetric_speed: Скорости метания лицевой и тыльной пластин
+            (несимметричное метание) [м/с].
+        :param acceleration_time: Время разгона пластины до максимальной
+            скорости [мкс].
+        :param rotation_angle: Угол поворота пластины [градус].
+        """
+        self.asymmetric_speed = asymmetric_speed
+        self.acceleration_time = acceleration_time
+        self.rotation_angle = rotation_angle

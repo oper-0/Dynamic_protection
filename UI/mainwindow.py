@@ -5,8 +5,7 @@ import sys
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QToolBar, \
-    QVBoxLayout, QLabel, QFormLayout, QLineEdit, QWidget, QScrollBar, \
-    QScrollArea
+    QVBoxLayout, QLabel, QFormLayout, QLineEdit, QWidget, QScrollArea
 
 
 class MyApp(QMainWindow):
