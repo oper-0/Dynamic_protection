@@ -43,7 +43,7 @@ def _calc_pen_rate(data: InData) -> float:
         :return: скорость проникновения струи [м/c]
     """
     # Получаем данные из класса InData
-    # Плотность задаем в
+    # Плотность задаем в кг/м3
     stream_density = data.stream_density * 1000
     pl_front_density = data.pl_front_density * 1000
     stream_velocity = data.stream_velocity * 1000
@@ -57,10 +57,10 @@ def _calc_pen_rate(data: InData) -> float:
 def do_main(data: InData) -> float:
     """Возвращает время инициирования детонации в заряде ВВ ЭДЗ
 
-    :param data: класс в котором хранятся входные данные расчета
+        :param data: класс в котором хранятся входные данные расчета
 
-    :rtype: float
-    :return: время инициирования детонации [с]
+        :rtype: float
+        :return: время инициирования детонации [с]
     """
     # Получаем данные из класса InData
     explosive_layer_height = data.explosive_layer_height
