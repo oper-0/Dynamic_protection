@@ -23,7 +23,11 @@ class InData:
                  detonation_pressure: float = None,
                  coeff_avr_pressure: float = None,
                  coeff_stream_dim_extension: float = None) -> None:
-        """Объект хранит значения входных данных
+        """Объект хранит значения входных данных.
+         Все данные передающиеся классу из формы сохраняются в системе СИ.
+
+        :param coeff_nu:
+        :param pl_front_thickness:
         :param pl_back_thickness:
         :param angle:
         :param pl_front_density:
@@ -45,30 +49,45 @@ class InData:
         :param detonation_pressure:
         :param coeff_avr_pressure:
         :param coeff_stream_dim_extension:
-        :param coeff_nu: эмпирический коэффициент
-        :param pl_front_thickness: толщина пластины (лицевой)
         """
+
         self.coeff_nu = coeff_nu
-        self.pl_front_thickness = pl_front_thickness
-        self.pl_back_thickness = pl_back_thickness
+        if pl_front_thickness is not None:
+            self.pl_front_thickness = pl_front_thickness / 1000
+        if pl_back_thickness is not None:
+            self.pl_back_thickness = pl_back_thickness / 1000
         self.angle = angle
-        self.pl_front_density = pl_front_density
-        self.pl_back_density = pl_back_density
-        self.pl_lim_fluidity = pl_lim_fluidity
-        self.pl_length = pl_length
-        self.pl_width = pl_width
-        self.explosive_layer_height = explosive_layer_height
-        self.explosive_density = explosive_density
-        self.detonation_velocity = detonation_velocity
-        self.crit_dim_detonation = crit_dim_detonation
-        self.stream_density = stream_density
-        self.stream_lim_fluidity = stream_lim_fluidity
-        self.stream_dim = stream_dim
-        self.stream_velocity = stream_velocity
+        if pl_front_density is not None:
+            self.pl_front_density = pl_front_density * 1000
+        if pl_back_density is not None:
+            self.pl_back_density = pl_back_density * 1000
+        if pl_lim_fluidity is not None:
+            self.pl_lim_fluidity = pl_lim_fluidity * 1e6
+        if pl_length is not None:
+            self.pl_length = pl_length / 1000
+        if pl_width is not None:
+            self.pl_width = pl_width / 1000
+        if explosive_layer_height is not None:
+            self.explosive_layer_height = explosive_layer_height / 1000
+        if explosive_density is not None:
+            self.explosive_density = explosive_density * 1000
+        if detonation_velocity is not None:
+            self.detonation_velocity = detonation_velocity
+        if crit_dim_detonation is not None:
+            self.crit_dim_detonation = crit_dim_detonation / 1000
+        if stream_density is not None:
+            self.stream_density = stream_density * 1000
+        if stream_lim_fluidity is not None:
+            self.stream_lim_fluidity = stream_lim_fluidity * 1e6
+        if stream_dim is not None:
+            self.stream_dim = stream_dim / 1000
+        if stream_velocity is not None:
+            self.stream_velocity = stream_velocity * 1000
         self.polytropy_index = polytropy_index
         self.ksi_z = ksi_z
         self.ksi_r = ksi_r
-        self.detonation_pressure = detonation_pressure
+        if detonation_pressure is not None:
+            self.detonation_pressure = detonation_pressure * 1e6
         self.coeff_avr_pressure = coeff_avr_pressure
         self.coeff_stream_dim_extension = coeff_stream_dim_extension
 

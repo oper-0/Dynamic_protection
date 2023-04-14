@@ -100,23 +100,18 @@ def do_main(data: InData) -> float:
     j2 = data.coeff_nu
     j3 = data.pl_front_thickness
     j5 = data.angle
-    j6 = data.pl_front_density
-    j8 = data.pl_lim_fluidity
-    j15 = data.stream_density
-    j17 = data.stream_dim
-    j18 = data.stream_velocity
 
-    m11 = j6 * 1000
-    m13 = j15 * 1000
-    m14 = j8 * 1e6
-    m16 = j17 / 1000
-    m17 = j18 * 1000
+    m11 = data.pl_front_density
+    m13 = data.stream_density
+    m14 = data.pl_lim_fluidity
+    m16 = data.stream_dim
+    m17 = data.stream_velocity
+    m2 = data.pl_front_thickness
 
-    m2 = j3 / 1000
     m4 = (sqrt(m13 / m11) / (1 + sqrt(m13 / m11))) * m17
     m5 = cos((j5 * mt.pi) / 180)
     m8 = (j2 * m2) / (m4 * m5)
     m10 = (sqrt(m11 * m13) / (sqrt(2 * m14) * (sqrt(m13) + sqrt(m11)))) * (m16 * m17)
-    m9 = sqrt((m10 ** 2) - ((sqrt((m10 ** 2) - (m16 ** 2)) - ((2 * m8) * sqrt(m14 / m11))) ** 2))
+    hole_dim = sqrt((m10 ** 2) - ((sqrt((m10 ** 2) - (m16 ** 2)) - ((2 * m8) * sqrt(m14 / m11))) ** 2))
 
-    return m9
+    return hole_dim

@@ -24,14 +24,13 @@ def _calc_inequality(data: InData) -> float:
     """
 
     j5 = data.angle
-    j14 = data.crit_dim_detonation
-    j17 = data.stream_dim
-    m16 = j17 / 1000
-    m20 = j14 / 1000
-    m5 = cos((j5 * pi) / 180)
-    m21 = (m20 / 2) / ((1 - (m20 / 2)) / ((1 * m16) * m5))
+    m16 = data.stream_dim
+    m20 = data.crit_dim_detonation
 
-    return m21
+    m5 = cos((j5 * pi) / 180)
+    meaning_ineq = (m20 / 2) / ((1 - (m20 / 2)) / ((1 * m16) * m5))
+
+    return meaning_ineq
 
 
 def _calc_pen_rate(data: InData) -> float:
@@ -44,9 +43,9 @@ def _calc_pen_rate(data: InData) -> float:
     """
     # Получаем данные из класса InData
     # Плотность задаем в кг/м3
-    stream_density = data.stream_density * 1000
-    pl_front_density = data.pl_front_density * 1000
-    stream_velocity = data.stream_velocity * 1000
+    stream_density = data.stream_density
+    pl_front_density = data.pl_front_density
+    stream_velocity = data.stream_velocity
 
     lamb = sqrt(stream_density / pl_front_density)
     pen_speed = (lamb * stream_velocity) / (1 + lamb)
@@ -63,10 +62,7 @@ def do_main(data: InData) -> float:
         :return: время инициирования детонации [с]
     """
     # Получаем данные из класса InData
-    explosive_layer_height = data.explosive_layer_height
-
-    # Задаем толщину ВВ в м
-    explosive_height = explosive_layer_height / 1000
+    explosive_height = data.explosive_layer_height
     # Вычисляем неравенство
     ineq = _calc_inequality(data)
     # Определяем время инициирования для тонкого слоя ВВ
