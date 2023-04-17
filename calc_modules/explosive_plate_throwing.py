@@ -43,18 +43,25 @@ def _calc_asymmetric_pl_speed(data: InData) -> Tuple[float, float]:
     if front_load_factor < 0.1:
         fr_w = _calc_blowing_param(data, speed_front_pl, speed_back_pl,
                                    PlPositions.PL_FRONT)
-        speed_front_pl = speed_front_pl / fr_w
+        fin_speed_front_pl = speed_front_pl / fr_w
+    else:
+        fin_speed_front_pl = speed_front_pl
+
     if back_load_factor < 0.1:
+        # Для перерасчета скорости тыльной пластины необходимо сохранить старое
+        # значение скорости передней пластины и наоборот
         bk_w = _calc_blowing_param(data, speed_front_pl, speed_back_pl,
                                    PlPositions.PL_BACK)
-        speed_back_pl = speed_back_pl / bk_w
+        fin_speed_back_pl = speed_back_pl / bk_w
+    else:
+        fin_speed_back_pl = speed_back_pl
 
-    return speed_front_pl, speed_back_pl
+    return fin_speed_front_pl, fin_speed_back_pl
 
 
 
 
-def _calc_blowing_param(data: InData, pl_bk_speed, pl_fr_speed, pl_pos: PlPositions) -> float:
+def _calc_blowing_param(data: InData, pl_fr_speed, pl_bk_speed, pl_pos: PlPositions) -> float:
     """Возвращает параметр выдувания для пластины
 
     :param pl_bk_speed:
@@ -65,18 +72,16 @@ def _calc_blowing_param(data: InData, pl_bk_speed, pl_fr_speed, pl_pos: PlPositi
     :rtype: float
     :return: Значение параметра выдувания пластины [б/р]
     """
-    j9 = data.pl_length
-    j10 = data.pl_width
-    j20 = data.ksi_z
-    j21 = data.ksi_r
+    pl_len = data.pl_length
+    pl_wid = data.pl_width
+    ksi_z = data.ksi_z
+    ksi_r = data.ksi_r
     m18 = data.explosive_layer_height
     m19 = data.explosive_density
-    m31 = data.pl_length
-    m32 = data.pl_width
 
-    m33 = j9 / j10
+    m33 = pl_len / pl_wid
     # Вычисляем параметр формы
-    form_param = (((m31 + m32) * m18) * m33) / (m31 * m32)
+    form_param = (((pl_len + pl_wid) * m18) * m33) / (pl_len * pl_wid)
 
     fr_h = m18 * ((1 + (pl_bk_speed / pl_fr_speed)) ** -1)
 
@@ -85,13 +90,13 @@ def _calc_blowing_param(data: InData, pl_bk_speed, pl_fr_speed, pl_pos: PlPositi
         m2 = data.pl_front_thickness
         m11 = data.pl_front_density
         m29 = (m19 * fr_h) / (m11 * m2)
-        w = sqrt(1 + (((1 + ((2 * j20) * m29)) / ((2 * j21) * m29)) * (form_param ** 2)))
+        w = sqrt(1 + (((1 + ((2 * ksi_z) * m29)) / ((2 * ksi_r) * m29)) * (form_param ** 2)))
     else:
         m3 = data.pl_back_thickness
         m12 = data.pl_back_density
         m28 = m18 - fr_h
         m30 = (m19 * m28) / (m12 * m3)
-        w = sqrt(1 + (((1 + ((2 * j20) * m30)) / ((2 * j21) * m30)) * (form_param ** 2)))
+        w = sqrt(1 + (((1 + ((2 * ksi_z) * m30)) / ((2 * ksi_r) * m30)) * (form_param ** 2)))
 
     return w
 
@@ -113,13 +118,10 @@ def _calc_load_factor(data: InData, pl_pos: PlPositions) -> float:
         pl_fr_thick = data.pl_back_thickness
         pl_bk_thick = data.pl_back_density
 
-    j11 = data.explosive_layer_height
-    j12 = data.explosive_density
-    m2 = pl_fr_thick / 1000
-    m11 = pl_bk_thick * 1000
-    m18 = j11 / 1000
-    m19 = j12 * 1000
-    load_coeff = (m19 * m18) / (m11 * m2)
+    exp_layer_h = data.explosive_layer_height
+    exp_den = data.explosive_density
+
+    load_coeff = (exp_den * exp_layer_h) / (pl_bk_thick * pl_fr_thick)
     """Можно подумать о генерации функции в зависимости от условий расчета. Считаем
     две пластины или одну"""
 
