@@ -3,9 +3,9 @@
 import sys
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QToolBar, \
-    QVBoxLayout, QLabel, QFormLayout, QLineEdit, QWidget, QScrollArea
+    QVBoxLayout, QLabel, QFormLayout, QLineEdit, QWidget, QScrollArea, QHBoxLayout
 
 
 class MyApp(QMainWindow):
@@ -120,10 +120,22 @@ class MyApp(QMainWindow):
         # Устанавливаем выравнивание подписей полей по правому краю
         form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
+        # Добавляем кнопку "Рассчитать"
+        res_btn = QPushButton("Рассчитать")
+        form_layout.addRow(res_btn)
+
         # Создаем область прокрутки формы
         form_scroll_area = QScrollArea()
         form_scroll_area.setWidgetResizable(True)
         form_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        h_layout = QHBoxLayout()
+
+        calc_graph = self.create_graph_pic()
+
+        h_layout.addLayout(form_layout)
+        h_layout.addWidget(calc_graph)
+
 
         # Добавляем верхнюю часть формы во внешний контейнер
         # main_layout.addLayout(form_layout)
@@ -143,7 +155,8 @@ class MyApp(QMainWindow):
 
         # Устанавливаем форму на главное окно
         widget = QWidget()
-        widget.setLayout(form_layout)
+        widget.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        widget.setLayout(h_layout)
         form_scroll_area.setWidget(widget)
         self.setCentralWidget(form_scroll_area)
 
@@ -151,6 +164,13 @@ class MyApp(QMainWindow):
         self.addToolBar(self.create_toolbar())
 
         self.show()
+
+    def create_graph_pic(self):
+        graf = QLabel()
+        graf.setPixmap(QPixmap("icons/graph.png"))
+        graf.setGeometry(0, 0, 1000, 1000)
+
+        return graf
 
     def create_joint_label_form(self, head_name: str,
                                 *par_names: str) -> QVBoxLayout:

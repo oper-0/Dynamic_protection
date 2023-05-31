@@ -1,3 +1,6 @@
+from enum import IntEnum, unique
+
+
 class InData:
 
     def __init__(self, coeff_nu: float = None,
@@ -92,17 +95,30 @@ class InData:
         self.coeff_stream_dim_extension = coeff_stream_dim_extension
 
 
+@unique
+class PlPositions(IntEnum):
+    """Перечисление со значениями позиции пластин"""
+    PL_FRONT = 0
+    PL_BACK = 1
+
+
 class DPPlate:
-    def __init__(self, asymmetric_speed: dict = None,
+    def __init__(self, position: PlPositions,
+                 throwing_speed: float = None,
                  acceleration_time: float = None,
-                 rotation_angle: float = None) -> None:
+                 rotation_angle: float = None,
+                 load_factor: float = None) -> None:
         """Объект хранит расчетные параметры пластины динамической защиты.
-        :param asymmetric_speed: Скорости метания лицевой и тыльной пластин
-            (несимметричное метание) [м/с].
+
+        :param position: позиция пластины
+        :param throwing_speed: скорость метания [м/с]
         :param acceleration_time: Время разгона пластины до максимальной
-            скорости [мкс].
-        :param rotation_angle: Угол поворота пластины [градус].
+            скорости [мкс]
+        :param rotation_angle: Угол поворота пластины [градус]
+        :param load_factor: коэффициент нагрузки
         """
-        self.asymmetric_speed = asymmetric_speed
+        self.position = position
+        self.throwing_speed = throwing_speed
         self.acceleration_time = acceleration_time
         self.rotation_angle = rotation_angle
+        self.load_factor = load_factor

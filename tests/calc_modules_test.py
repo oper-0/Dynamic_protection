@@ -4,10 +4,13 @@ import unittest
 from objects.parametrs import InData
 from fractions import Fraction
 
-# Функции для тестов
+# Импорт для тестов
 from calc_modules import calc_hole
 from calc_modules import init_detonation as in_det
 from calc_modules import explosive_plate_throwing as exp_throw
+from calc_modules.explosive_plate_throwing import PlPositions
+from objects.parametrs import DPPlate
+from typing import Tuple
 
 FRACTIONAL_PART = 5
 
@@ -57,10 +60,22 @@ class MyTestCase(unittest.TestCase):
         result = in_det.do_main(data) * 1e6
         self.assertAlmostEqual(result, 0.86045, places=FRACTIONAL_PART)
 
+    def test_exp_pl_load_factor(self):
+        data = InData(pl_front_thickness=1.5,
+                      pl_back_thickness=1.5,
+                      pl_front_density=7.85,
+                      pl_back_density=7.85,
+                      explosive_layer_height=10,
+                      explosive_density=1.6)
+
+        load_factor = exp_throw._calc_load_factor(data, PlPositions.PL_FRONT)
+        self.assertAlmostEqual(load_factor, 1.35881, places=FRACTIONAL_PART)
+
     def test_explosive_plate_throwing_mod1(self):
         """Проверка функции расчета скоростей метания при коэффициенте
          нагрузки r >= 0.1
          """
+        # Задание параметров теста
         data = InData(pl_front_thickness=1.5,
                       pl_back_thickness=1.5,
                       pl_front_density=7.85,
@@ -74,9 +89,12 @@ class MyTestCase(unittest.TestCase):
                       ksi_z=float(Fraction(1, 6)),
                       ksi_r=float(Fraction(1, 12)))
 
-        speed1, speed2 = exp_throw._calc_asymmetric_pl_speed(data)
-        self.assertAlmostEqual(speed1, 2105.14167, places=FRACTIONAL_PART)
-        self.assertAlmostEqual(speed2, 2105.14167, places=FRACTIONAL_PART)
+        # Сделать функцию для предварительного расчета этих параметров
+        fr_plate, bk_plate = self._pre_calc_load_factor(data)
+
+        exp_throw._calc_asymmetric_pl_speed(data, fr_plate, bk_plate)
+        self.assertAlmostEqual(fr_plate.throwing_speed, 2105.14167, places=FRACTIONAL_PART)
+        self.assertAlmostEqual(bk_plate.throwing_speed, 2105.14167, places=FRACTIONAL_PART)
 
     def test_explosive_plate_throwing_mod2(self):
         """Проверка функции расчета скоростей метания при коэффициенте
@@ -94,9 +112,13 @@ class MyTestCase(unittest.TestCase):
                       polytropy_index=3,
                       ksi_z=float(1 / 6),
                       ksi_r=float(1 / 12))
-        speed1, speed2 = exp_throw._calc_asymmetric_pl_speed(data)
-        self.assertAlmostEqual(speed1, 242.47437, places=FRACTIONAL_PART)
-        self.assertAlmostEqual(speed2, 242.47437, places=FRACTIONAL_PART)
+
+        fr_plate, bk_plate = self._pre_calc_load_factor(data)
+
+        exp_throw._calc_asymmetric_pl_speed(data, fr_plate, bk_plate)
+
+        self.assertAlmostEqual(fr_plate.throwing_speed, 242.47437, places=FRACTIONAL_PART)
+        self.assertAlmostEqual(bk_plate.throwing_speed, 242.47437, places=FRACTIONAL_PART)
 
     def test_explosive_plate_throwing_mod3(self):
         """Случайный кейс по расчету скоростей, где r1 < 0.1, а r2 > 0.1
@@ -113,9 +135,29 @@ class MyTestCase(unittest.TestCase):
                       polytropy_index=3,
                       ksi_z=float(1 / 6),
                       ksi_r=float(1 / 12))
-        speed1, speed2 = exp_throw._calc_asymmetric_pl_speed(data)
-        self.assertAlmostEqual(speed1, 200.57901, places=FRACTIONAL_PART)
-        self.assertAlmostEqual(speed2, 818.75877, places=FRACTIONAL_PART)
+
+        fr_plate, bk_plate = self._pre_calc_load_factor(data)
+
+        exp_throw._calc_asymmetric_pl_speed(data, fr_plate, bk_plate)
+
+        self.assertAlmostEqual(fr_plate.throwing_speed, 200.57901, places=FRACTIONAL_PART)
+        self.assertAlmostEqual(bk_plate.throwing_speed, 818.75877, places=FRACTIONAL_PART)
+
+
+
+    def _pre_calc_load_factor(self, data: InData) -> Tuple[DPPlate, DPPlate]:
+        """Делает предварительный расчет коэффициента нагрузки для двух пластин и
+        возвращает эти пластины
+
+        :param data:
+        :return:
+        """
+        fr_plate, bk_plate = DPPlate(PlPositions.PL_FRONT), DPPlate(PlPositions.PL_BACK)
+        fr_plate.load_factor = exp_throw._calc_load_factor(data, fr_plate.position)
+        bk_plate.load_factor = exp_throw._calc_load_factor(data, bk_plate.position)
+
+        return fr_plate, bk_plate
+
 
 if __name__ == '__main__':
     unittest.main()

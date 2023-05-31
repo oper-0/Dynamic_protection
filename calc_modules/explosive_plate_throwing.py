@@ -11,27 +11,23 @@ __version__ = 1.0
 """
 
 from math import sqrt
-from objects.parametrs import InData, DPPlate
+from objects.parametrs import InData, DPPlate, PlPositions
+
 from typing import Tuple
-from enum import IntEnum, unique
 
-@unique
-class PlPositions(IntEnum):
-    """Перечисление со значениями позиции пластин"""
-    PL_FRONT = 1
-    PL_BACK = 2
 
-def _calc_asymmetric_pl_speed(data: InData) -> Tuple[float, float]:
-    """Возвращает кортеж значений скоростей метания 1-ой и 2-ой пластин
+def _calc_asymmetric_pl_speed(data: InData, fr_plate: DPPlate, bk_plate: DPPlate) -> None:
+    """Вычисляет значения скоростей метания 1-ой и 2-ой пластин и помещает их в
+    объекты DPPlate. Скорость вычисляется в [м/с]
 
+        :param fr_plate:
+        :param bk_plate:
         :param data: класс в котором хранятся входные данные расчета
 
-        :rtype: Tuple[float, float]
-        :return: кортеж скоростей метания пластин [скорость первой пластины,
-            скорость второй пластины] [м/с]
+        :return: None
     """
-    front_load_factor = _calc_load_factor(data, PlPositions.PL_FRONT)
-    back_load_factor = _calc_load_factor(data, PlPositions.PL_BACK)
+    front_load_factor = fr_plate.load_factor
+    back_load_factor = bk_plate.load_factor
     v14 = _calc_garni_energy(data)
     # Вычисляем скорость метания лицевой пластины
     speed_front_pl = sqrt(2 * v14) * \
@@ -43,25 +39,25 @@ def _calc_asymmetric_pl_speed(data: InData) -> Tuple[float, float]:
     if front_load_factor < 0.1:
         fr_w = _calc_blowing_param(data, speed_front_pl, speed_back_pl,
                                    PlPositions.PL_FRONT)
-        fin_speed_front_pl = speed_front_pl / fr_w
+        fr_plate.throwing_speed = speed_front_pl / fr_w
     else:
-        fin_speed_front_pl = speed_front_pl
+        fr_plate.throwing_speed = speed_front_pl
 
     if back_load_factor < 0.1:
         # Для перерасчета скорости тыльной пластины необходимо сохранить старое
         # значение скорости передней пластины и наоборот
         bk_w = _calc_blowing_param(data, speed_front_pl, speed_back_pl,
                                    PlPositions.PL_BACK)
-        fin_speed_back_pl = speed_back_pl / bk_w
+        bk_plate.throwing_speed = speed_back_pl / bk_w
     else:
-        fin_speed_back_pl = speed_back_pl
-
-    return fin_speed_front_pl, fin_speed_back_pl
+        bk_plate.throwing_speed = speed_back_pl
 
 
 
 
-def _calc_blowing_param(data: InData, pl_fr_speed, pl_bk_speed, pl_pos: PlPositions) -> float:
+
+def _calc_blowing_param(data: InData, pl_fr_speed,
+                        pl_bk_speed, pl_pos: PlPositions) -> float:
     """Возвращает параметр выдувания для пластины
 
     :param pl_bk_speed:
@@ -134,7 +130,7 @@ def _calc_garni_energy(data: InData) -> float:
         :param data:класс в котором хранятся входные данные расчета
 
         :rtype: float
-        :return: Энергия Гарни [? какая-то стандартная единица]
+        :return: Энергия Гарни [? какая-то стандартная единица ?]
         """
     j13 = data.detonation_velocity
     j19 = data.polytropy_index
@@ -142,4 +138,16 @@ def _calc_garni_energy(data: InData) -> float:
 
     return v14
 
+def do_main(data: InData) -> Tuple[DPPlate, DPPlate]:
+    """Функция выполняет полный расчет параметров пластин и возвращает кортеж
+    объектов с объектами, где хранятся эти параметры
+    Надо рассчитывать параметр нагрузки в начале всего расчета и далее к нему обращаться
+    через объекты пластин
+    """
+    fr_plate, bk_plate = DPPlate(PlPositions.PL_FRONT), DPPlate(PlPositions.PL_BACK)
 
+    fr_plate.load_factor = _calc_load_factor(data, fr_plate.position)
+    bk_plate.load_factor = _calc_load_factor(data, bk_plate.position)
+
+
+    return fr_plate, bk_plate
