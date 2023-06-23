@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QVBoxLayout, QSizePolicy, QListWidget
 
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 from ui_v2.infrastructure.Spacers import VSpacer

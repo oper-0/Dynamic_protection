@@ -1,13 +1,16 @@
-from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize
+import typing
+
+from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF
 from PyQt6.QtGui import QPainter, QBrush, QPen
+from PyQt6.QtWidgets import QGraphicsItem, QWidget
 
 
-class DynamicProtectionElement:
+class DynamicProtectionElement(QGraphicsItem):
 
     """Calculation parameters"""
     _empirical_coefficient: float = 4.5
-    _face_plate_thickness: float = 1.5*3
-    _rear_plate_thickness: float = 1.5*3
+    _face_plate_thickness: float = 1.5#*3
+    _rear_plate_thickness: float = 1.5#*3
     _tilt_angle: float = 68
     _face_plate_density: float = 7.85
     _rear_plate_density: float = 7.85
@@ -15,7 +18,7 @@ class DynamicProtectionElement:
     _element_length: float = 260
     _element_width: float = 138
 
-    _explosive_layer_thickness: float = 10*3
+    _explosive_layer_thickness: float = 10#*3
     _explosive_density: float = 1.6
     _explosive_detonation_velocity: float = 8000
     _explosive_detonation_critical_diameter: float = 0.5
@@ -37,25 +40,63 @@ class DynamicProtectionElement:
     rear_plate_brush: QBrush = QBrush(Qt.GlobalColor.blue, Qt.BrushStyle.Dense3Pattern)
     explosion_brush: QBrush = QBrush(Qt.GlobalColor.yellow, Qt.BrushStyle.Dense6Pattern)
 
-    def draw(self, painter: QPainter, positon: QPointF):
-        """
-        Uses painter to draw the element
-        """
-        painter.translate(positon)
-        painter.rotate(self.tilt_angle)
-        positon=QPointF(0, 0)
+    def __init__(self):
+        super().__init__()
+        self.setRotation(45)
+
+    def grabMouse(self) -> None:
+        print('grabed!')
+
+    # def draw(self, painter: QPainter, positon: QPointF):
+    #     """
+    #     Uses painter to draw the element
+    #     """
+    #     painter.translate(positon)
+    #     painter.rotate(self.tilt_angle)
+    #     positon=QPointF(0, 0)
+    #     painter.setPen(self.border_pen)
+    #
+    #     face_plate_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2-self.face_plate_thickness),
+    #                                    int(positon.y() - self.element_length/2)),
+    #                             QSize(int(self.face_plate_thickness), int(self.element_length)))
+    #
+    #     explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2),
+    #                                         int(positon.y() - self.element_length/2)),
+    #                                  QSize(int(self.explosive_layer_thickness), int(self.element_length)))
+    #
+    #     rear_plate_rect = QRect(QPoint(int(positon.x()+self.explosive_layer_thickness/2),
+    #                                    int(positon.y()-self.element_length/2)),
+    #                             QSize(int(self.rear_plate_thickness), int(self.element_length)))
+    #
+    #     painter.fillRect(face_plate_rect, self.face_plate_brush)
+    #     painter.fillRect(explosion_layer_rect, self.explosion_brush)
+    #     painter.fillRect(rear_plate_rect, self.rear_plate_brush)
+    #     painter.drawRect(face_plate_rect)
+    #     painter.drawRect(explosion_layer_rect)
+    #     painter.drawRect(rear_plate_rect)
+
+    def boundingRect(self) -> QRectF:
+        return QRectF(0,0, 50,50) #fixme
+
+    def paint(self, painter: QPainter, option: 'QStyleOptionGraphicsItem', widget: typing.Optional[QWidget] = ...) -> None:
+
+        # positon = QPointF(0, 0)
+        # self.painter = painter
+
+        positon = QPointF(50, 50)
         painter.setPen(self.border_pen)
 
-        face_plate_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2-self.face_plate_thickness),
-                                       int(positon.y() - self.element_length/2)),
-                                QSize(int(self.face_plate_thickness), int(self.element_length)))
+        face_plate_rect = QRect(
+            QPoint(int(positon.x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness),
+                   int(positon.y() - self.element_length / 2)),
+            QSize(int(self.face_plate_thickness), int(self.element_length)))
 
-        explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2),
-                                            int(positon.y() - self.element_length/2)),
+        explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness / 2),
+                                            int(positon.y() - self.element_length / 2)),
                                      QSize(int(self.explosive_layer_thickness), int(self.element_length)))
 
-        rear_plate_rect = QRect(QPoint(int(positon.x()+self.explosive_layer_thickness/2),
-                                       int(positon.y()-self.element_length/2)),
+        rear_plate_rect = QRect(QPoint(int(positon.x() + self.explosive_layer_thickness / 2),
+                                       int(positon.y() - self.element_length / 2)),
                                 QSize(int(self.rear_plate_thickness), int(self.element_length)))
 
         painter.fillRect(face_plate_rect, self.face_plate_brush)
@@ -64,6 +105,14 @@ class DynamicProtectionElement:
         painter.drawRect(face_plate_rect)
         painter.drawRect(explosion_layer_rect)
         painter.drawRect(rear_plate_rect)
+
+    def mack_thicker(self, coeff) -> None:
+        self._face_plate_thickness *= coeff  # *3
+        self._rear_plate_thickness *= coeff  # *3
+        self._explosive_layer_thickness *= coeff  # *3
+
+    def mack_longer(self, coeff) -> None:
+        self._element_length *= coeff
 
 
     @property

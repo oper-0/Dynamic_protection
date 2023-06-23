@@ -15,11 +15,88 @@ class Scene(QWidget):
     def __init__(self):
         super().__init__()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        cnv = Canvas(self.height(), self.width())
+        # cnv = Canvas(self.height(), self.width())
+        # print(self.height(), self.width())
+        cnv = ViewArea()
         lo = QVBoxLayout()
         lo.addWidget(cnv)
         self.setLayout(lo)
 
+
+class ViewArea(QGraphicsView):
+
+    def __init__(self):
+        super().__init__()
+
+        self.scene = QGraphicsScene()
+        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # self.setSceneRect(0, -self.scene.sceneRect().height()/2, self.scene.sceneRect().width(), self.scene.sceneRect().height())
+
+        # draw some lines in scene
+        self.draw_axs()
+
+        # self.scene.addText('LEBULEBUEB:ELBELBS')
+        self.item1 = DynamicProtectionElement()
+        self.scene.addItem(self.item1)
+
+        # self.scale(2, 1)
+        self.setScene(self.scene)
+
+    def draw_axs(self):
+        pen = QPen(Qt.GlobalColor.green, 1, Qt.PenStyle.DashDotDotLine)
+        # self.scene.addLine(0, self.scene.height()/2, self.scene.width(), self.scene.height()/2, pen)
+        # self.scene.addLine(-1000, 0, 1000, 0, pen)
+        # self.scene.addLine(-100, 0, 100, 0, pen)
+        self.scene.addLine( -100,
+                            0,
+                            100,
+                            0,
+                            pen)
+
+
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        if event.angleDelta().y()>0:
+            self.scale(1.2, 1.2)
+            # self.item1.setRotation(self.item1.rotation()+10)
+            # print(self.item1.rotation())
+            # self.item1.setScale(2)
+            # self.item1.mack_thicker(1.2)
+            # self.item1.mack_longer(1.1)
+            self.scene.update()
+            # self.repaint()
+        else:
+            self.scale(0.8, 0.8)
+            # self.item1.setRotation(self.item1.rotation()-10)
+            # print(self.item1.rotation())
+            # self.item1.setScale(0.5)
+            # self.item1.mack_thicker(0.8)
+            # self.item1.mack_longer(0.9)
+            self.scene.update()
+            # pass
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            self._rightButtonPressed = True
+            self._panStartX = event.pos().x()
+            self._panStartY = event.pos().y()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+
+    def mouseReleaseEvent(self, event):
+        if event.button()==Qt.MouseButton.RightButton:
+            self._rightButtonPressed = False
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def mouseMoveEvent(self, event):
+        if self._rightButtonPressed:
+            # self.scene.setSceneRect(self.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
+            # self.setSceneRect(self.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
+            self.scene.setSceneRect(self.scene.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
+            # self.scene.setSceneRect(self.scene.sceneRect(). (event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
+            # self.scene.sceneRect().moveTo(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY)
+            # self.viewport().move(self.viewport().x()+event.pos().x()-self._panStartX,
+            #                      self.viewport().y()+event.pos().y()-self._panStartY)
+            self._panStartX = event.pos().x()
+            self._panStartY = event.pos().y()
 
 
 # Creates widget to be drawn on

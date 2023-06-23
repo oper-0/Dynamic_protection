@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Protocol  # i really want to use this but abc should be best practice here
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QFont
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy
+from PyQt6.QtCore import Qt, QMimeData
+from PyQt6.QtGui import QPixmap, QFont, QDragEnterEvent, QDropEvent, QMouseEvent, QDrag
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSizePolicy, QApplication
 
 
 class SceneItemAbstract:
@@ -24,6 +24,7 @@ class SceneItemWidget(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
+
         self.title = title
         self.description = description
 
@@ -37,11 +38,11 @@ class SceneItemWidget(QWidget):
 
 
         #   title to item
-        self.title_text = QLabel(self.title)
-        self.title_text.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.title_text.setFont(QFont('Courier New'))
-        self.title_text.setStyleSheet('color: gray')
-        layout.addWidget(self.title_text)
+        self.title_text_label = QLabel(self.title)
+        self.title_text_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        self.title_text_label.setFont(QFont('Courier New'))
+        self.title_text_label.setStyleSheet('color: gray')
+        layout.addWidget(self.title_text_label)
 
         #   tooltip for item
         self.setToolTip(description)
@@ -49,13 +50,32 @@ class SceneItemWidget(QWidget):
         self.setLayout(layout)
 
     def mousePressEvent(self, e):
+        if e.button() != Qt.MouseButton.LeftButton:
+            return
         self.lb.setStyleSheet('background: lightGray')
-        self.title_text.setStyleSheet('color: black')
-        # self.pm.
+        self.title_text_label.setStyleSheet('color: black')
         # self.setGraphicsEffect(QtWidgets.QGraphicsColorizeEffect())
+        self.drag_start_position = e.pos()
+
+    def mouseMoveEvent(self, e: QMouseEvent) -> None:
+        if not (e.buttons() & Qt.MouseButton.LeftButton):
+            return
+        if (e.pos() - self.drag_start_position).manhattanLength() < QApplication.startDragDistance():
+            return
+        self.lb.setStyleSheet('background: transparent')
+        self.title_text_label.setStyleSheet('color: gray')
+
+        drag = QDrag(self)
+        mimedata = QMimeData()
+        mimedata.setText(self.title)
+        drag.setMimeData(mimedata)
+        # drag.setPixmap(self.lb.pixmap().scaled(24, 24))
+        drag.setPixmap(self.lb.pixmap())
+        drag.setHotSpot(e.pos())
+        drag.exec(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction)
 
 
     def mouseReleaseEvent(self, e):
         self.lb.setStyleSheet('background: transparent')
-        self.title_text.setStyleSheet('color: gray')
+        self.title_text_label.setStyleSheet('color: gray')
         # self.setGraphicsEffect(QtWidgets.Ef)

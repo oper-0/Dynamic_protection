@@ -4,7 +4,9 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QToolBar, QStatusBar, QDockWidget, QWidget, QLabel, QHBoxLayout, QSizePolicy
 
+from ui_v2.ArmorItems_library.ERA import generate_catalog
 from ui_v2.infrastructure.Sceene import Scene
+from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 from ui_v2.infrastructure.UserLogger import LoggerWidget
 from ui_v2.infrastructure.catalogWidget import SceneItemsCatalog
 from ui_v2.infrastructure.mulryTabDockArea import DockAreaWidget
@@ -94,6 +96,13 @@ class mainWindow(QMainWindow):
 
         # lw = QLabel('ITEMS LIBRARY (IMPLEMENT ME!)') #fixme
         lw = SceneItemsCatalog()
+        catalog_items = generate_catalog(self.interactor.paths.abs_img_dir)
+        for i in catalog_items:
+            lw.add_item(i)
+
+        # lw.add_item(SceneItemWidget('ДЗ', 'Динамическая Защита', os.path.join(self.interactor.paths.abs_img_dir, 'ERA_shell_1.png')))
+        # lw.add_item(SceneItemWidget('ЭДЗ', 'Элемент Динамической Защиты', os.path.join(self.interactor.paths.abs_img_dir, 'ERA_3.png')))
+        # lw.add_item(SceneItemWidget('Резина', 'Резиновый брусок ???', os.path.join(self.interactor.paths.abs_img_dir, 'rubber_bar.png')))
         lw.test_populate_me(os.path.join(self.interactor.paths.abs_img_dir, 'question_mark_pink_500.png'))
 
         self.LEFT_DOCK_AREA.setWidget(lw)
