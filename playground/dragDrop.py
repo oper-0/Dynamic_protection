@@ -42,7 +42,6 @@ class DropLabel(QLabel):
         self.setText(text)
         event.acceptProposedAction()
 
-
 class Widget(QWidget):
     def __init__(self):
         super().__init__()

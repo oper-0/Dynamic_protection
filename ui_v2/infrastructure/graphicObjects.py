@@ -1,9 +1,35 @@
 import typing
 
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF
 from PyQt6.QtGui import QPainter, QBrush, QPen
 from PyQt6.QtWidgets import QGraphicsItem, QWidget
 
+class test_item(QGraphicsItem):
+
+    def __init__(self):
+        super().__init__()
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+
+        self.pen = QPen(Qt.PenStyle.SolidLine)
+        self.pen.setColor(Qt.GlobalColor.black)
+        self.pen.setWidth(8)
+        self.brush = QBrush(Qt.GlobalColor.red)
+
+        self.rect = QRectF(QPointF(0,0),QPointF(15,15))
+
+    def mouseMoveEvent(self, event):
+        super(test_item, self).mouseMoveEvent(event)
+
+    def boundingRect(self):
+        return self.rect
+
+    def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
+        painter.setBrush(self.brush)
+        painter.setPen(self.pen)
+        painter.drawRect(self.rect)
 
 class DynamicProtectionElement(QGraphicsItem):
 
@@ -33,57 +59,65 @@ class DynamicProtectionElement(QGraphicsItem):
     _distance: float = 0
 
     """Drawing parameters"""
+    position: QPointF = QPointF(0, 0)
 
     border_pen: QPen = QPen(Qt.GlobalColor.black, 1)
 
     face_plate_brush: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense3Pattern)
     rear_plate_brush: QBrush = QBrush(Qt.GlobalColor.blue, Qt.BrushStyle.Dense3Pattern)
     explosion_brush: QBrush = QBrush(Qt.GlobalColor.yellow, Qt.BrushStyle.Dense6Pattern)
+    face_plate_brush_highlight: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.SolidPattern)
+    rear_plate_brush_highlight: QBrush = QBrush(Qt.GlobalColor.blue, Qt.BrushStyle.SolidPattern)
+    explosion_brush_highlight: QBrush = QBrush(Qt.GlobalColor.yellow, Qt.BrushStyle.SolidPattern)
 
     def __init__(self):
         super().__init__()
-        self.setRotation(45)
+        # self.setRotation(45)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        # self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
 
-    def grabMouse(self) -> None:
-        print('grabed!')
+        # self.checked_effect = QtWidgets.QGraphicsBlurEffect()
+        # self.checked_effect = QtWidgets.QGraphicsColorizeEffect()
+        # self.checked_effect.setEnabled(False)
+        # self.setGraphicsEffect(self.checked_effect)
 
-    # def draw(self, painter: QPainter, positon: QPointF):
-    #     """
-    #     Uses painter to draw the element
-    #     """
-    #     painter.translate(positon)
-    #     painter.rotate(self.tilt_angle)
-    #     positon=QPointF(0, 0)
-    #     painter.setPen(self.border_pen)
-    #
-    #     face_plate_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2-self.face_plate_thickness),
-    #                                    int(positon.y() - self.element_length/2)),
-    #                             QSize(int(self.face_plate_thickness), int(self.element_length)))
-    #
-    #     explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness/2),
-    #                                         int(positon.y() - self.element_length/2)),
-    #                                  QSize(int(self.explosive_layer_thickness), int(self.element_length)))
-    #
-    #     rear_plate_rect = QRect(QPoint(int(positon.x()+self.explosive_layer_thickness/2),
-    #                                    int(positon.y()-self.element_length/2)),
-    #                             QSize(int(self.rear_plate_thickness), int(self.element_length)))
-    #
-    #     painter.fillRect(face_plate_rect, self.face_plate_brush)
-    #     painter.fillRect(explosion_layer_rect, self.explosion_brush)
-    #     painter.fillRect(rear_plate_rect, self.rear_plate_brush)
-    #     painter.drawRect(face_plate_rect)
-    #     painter.drawRect(explosion_layer_rect)
-    #     painter.drawRect(rear_plate_rect)
+        self.highlight_flag = False
+
+    def mouseMoveEvent(self, event):
+        self.position=event.pos()
+        super(DynamicProtectionElement, self).mouseMoveEvent(event)
 
     def boundingRect(self) -> QRectF:
-        return QRectF(0,0, 50,50) #fixme
+        return self.getBoundingRect
+
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        # self.checked_effect.setEnabled(True)
+        ...
+
+    def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self.highlight_flag = True
+
+    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        # self.checked_effect.setEnabled(False)
+        # self.position = event.pos()
+        # print(f"psition is {self.position}")
+        ...
+
+    # def itemChange(self, change: 'QGraphicsItem.GraphicsItemChange', value: typing.Any) -> typing.Any:
+    #     if change==QGraphicsItem.GraphicsItemChange.ItemPositionChange:
+    #         print(11111)
 
     def paint(self, painter: QPainter, option: 'QStyleOptionGraphicsItem', widget: typing.Optional[QWidget] = ...) -> None:
 
         # positon = QPointF(0, 0)
         # self.painter = painter
 
-        positon = QPointF(50, 50)
+        # positon = QPointF(0, 0)
+        # self.position = QPointF(0, self.position.y())
+        positon = self.position
+        # positon = self.pos()
+        print(f"pos is {self.position}")
         painter.setPen(self.border_pen)
 
         face_plate_rect = QRect(
@@ -99,21 +133,74 @@ class DynamicProtectionElement(QGraphicsItem):
                                        int(positon.y() - self.element_length / 2)),
                                 QSize(int(self.rear_plate_thickness), int(self.element_length)))
 
-        painter.fillRect(face_plate_rect, self.face_plate_brush)
-        painter.fillRect(explosion_layer_rect, self.explosion_brush)
-        painter.fillRect(rear_plate_rect, self.rear_plate_brush)
-        painter.drawRect(face_plate_rect)
-        painter.drawRect(explosion_layer_rect)
-        painter.drawRect(rear_plate_rect)
+        if self.highlight_flag:
+            painter.fillRect(face_plate_rect, self.face_plate_brush_highlight)
+            painter.fillRect(explosion_layer_rect, self.explosion_brush_highlight)
+            painter.fillRect(rear_plate_rect, self.rear_plate_brush_highlight)
+            painter.drawRect(face_plate_rect)
+            painter.drawRect(explosion_layer_rect)
+            painter.drawRect(rear_plate_rect)
+        else:
+            painter.fillRect(face_plate_rect, self.face_plate_brush)
+            painter.fillRect(explosion_layer_rect, self.explosion_brush)
+            painter.fillRect(rear_plate_rect, self.rear_plate_brush)
+            painter.drawRect(face_plate_rect)
+            painter.drawRect(explosion_layer_rect)
+            painter.drawRect(rear_plate_rect)
 
-    def mack_thicker(self, coeff) -> None:
-        self._face_plate_thickness *= coeff  # *3
-        self._rear_plate_thickness *= coeff  # *3
-        self._explosive_layer_thickness *= coeff  # *3
 
-    def mack_longer(self, coeff) -> None:
-        self._element_length *= coeff
 
+
+        # painter.drawEllipse(self.pos(), 10, 10)
+        painter.drawEllipse(self.position)
+        # tmp_pen = QPen(Qt.GlobalColor.green, 1)
+        # painter.setPen(tmp_pen)
+        # self.border_pen.setColor(Qt.GlobalColor.green)
+
+    # def scale_x_in(self):
+    #     self._face_plate_thickness *= self._scale_x_coef[0]  # *3
+    #     self._rear_plate_thickness *= self._scale_x_coef[0]  # *3
+    #     self._explosive_layer_thickness *= self._scale_x_coef[0]  # *3
+    #
+    # def scale_x_out(self):
+    #     self._face_plate_thickness *= self._scale_x_coef[1]  # *3
+    #     self._rear_plate_thickness *= self._scale_x_coef[1]  # *3
+    #     self._explosive_layer_thickness *= self._scale_x_coef[1]  # *3
+    #
+    # def scale_y_in(self):
+    #     self._element_length *= self._scale_y_coef[0]
+    #
+    # def scale_y_out(self):
+    #     self._element_length *= self._scale_y_coef[1]
+
+    def scale_object(self, coef: float):
+        self._face_plate_thickness *= coef
+        self._rear_plate_thickness *= coef
+        self._explosive_layer_thickness *= coef
+
+        self._element_length *= coef
+
+
+    # def mack_thicker(self, coeff) -> None:
+    #     self._face_plate_thickness *= coeff  # *3
+    #     self._rear_plate_thickness *= coeff  # *3
+    #     self._explosive_layer_thickness *= coeff  # *3
+    #
+    # def mack_longer(self, coeff) -> None:
+    #     self._element_length *= coeff
+
+
+    @property
+    def getBoundingRect(self):
+        # return QRectF(QPointF(self.pos().x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness,
+        #                       self.pos().y() - self.element_length / 2),
+        #               QPointF(self.pos().x() + self.explosive_layer_thickness / 2 - self.rear_plate_thickness,
+        #                       self.pos().y() + self.element_length / 2))
+
+        return QRectF(QPointF(self.position.x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness,
+                              self.position.y() - self.element_length / 2),
+                      QPointF(self.position.x() + self.explosive_layer_thickness / 2 - self.rear_plate_thickness,
+                              self.position.y() + self.element_length / 2))
 
     @property
     def empirical_coefficient(self):

@@ -4,8 +4,9 @@ from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QToolBar, QStatusBar, QDockWidget, QWidget, QLabel, QHBoxLayout, QSizePolicy
 
+from playground.dragDrop import DropLabel
 from ui_v2.ArmorItems_library.ERA import generate_catalog
-from ui_v2.infrastructure.Sceene import Scene
+from ui_v2.infrastructure.Sceene import Scene, ViewArea
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 from ui_v2.infrastructure.UserLogger import LoggerWidget
 from ui_v2.infrastructure.catalogWidget import SceneItemsCatalog
@@ -71,7 +72,8 @@ class mainWindow(QMainWindow):
         self.addToolBar(self.TOOLBAR)
 
     def _SetCentralWidget(self):
-        self.SCENE = Scene()
+        # self.SCENE = Scene()
+        self.SCENE = ViewArea()
 
         self.setCentralWidget(self.SCENE)
 
@@ -114,6 +116,7 @@ class mainWindow(QMainWindow):
         self.RIGHT_DOCK_AREA = QDockWidget()
 
         lw = QLabel('ITEM PROPERTY') #fixme
+        # lw = DropLabel2('ITEM PROPERTY') #fixme
         # lw = SceneItemsCatalog()
         # lw.test_populate_me(os.path.join(self.interactor.paths.abs_img_dir, 'question_mark_pink_500.png'))
 
