@@ -1,5 +1,6 @@
 import sys
 import time
+from typing import Callable
 
 from PyQt6 import QtGui, QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
@@ -8,187 +9,214 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGr
     QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy
 
 from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item
+from ui_v2.infrastructure.helpers import ItemsCollectionInterface
 
 
-class Scene(QWidget):
+class GraphicsScene(QGraphicsScene):
 
-    def __init__(self):
-        super().__init__()
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # cnv = Canvas(self.height(), self.width())
-        # print(self.height(), self.width())
-        cnv = ViewArea()
-        lo = QVBoxLayout()
-        lo.addWidget(cnv)
-        self.setLayout(lo)
+    status_bar: Callable[[str], None]
+    logger: Callable[[str,str], None]
+    item_catalog: ItemsCollectionInterface
 
 
-class ViewArea(QGraphicsView):
+    # def __int__(self):
+    #     self.setSceneRect(0, 0, self.GraphicsView.width(), self.GraphicsView.height())
 
-    def __init__(self):
-        super().__init__()
-        self.setAcceptDrops(True)
+    def drawForeground(self, painter, rect):
+        super(GraphicsScene, self).drawForeground(painter, rect)
+        if not hasattr(self, "cursor_position"):
+            return
+        painter.save()
+        pen = QPen(Qt.GlobalColor.cyan)
+        pen.setWidth(1)
+        painter.setPen(pen)
+        linex = QtCore.QLineF(
+            rect.left(),
+            self.cursor_position.y(),
+            rect.right(),
+            self.cursor_position.y(),
+        )
+        liney = QtCore.QLineF(
+            self.cursor_position.x(),
+            rect.top(),
+            self.cursor_position.x(),
+            rect.bottom(),
+        )
+        for line in (linex, liney):
+            painter.drawLine(line)
+        painter.restore()
 
-        self.scene = QGraphicsScene()
-        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        # self.setSceneRect(0, -self.scene.sceneRect().height()/2, self.scene.sceneRect().width(), self.scene.sceneRect().height())
+    def mouseMoveEvent(self, event):
+        self.cursor_position = event.scenePos()
+        self.update()
+        super(GraphicsScene, self).mouseMoveEvent(event)
+        # print(self.cursor_position)
+        self.status_bar(f"x:{int(self.cursor_position.x())} y:{int(self.cursor_position.y())}")
 
-        # draw some lines in scene
-        # self.draw_axs()
-
-        # self.scene.addText('LEBULEBUEB:ELBELBS')
-        self.item1 = DynamicProtectionElement()
-        # self.item2 = test_item()
-        self.scene.addItem(self.item1)
-        # self.scene.addItem(self.item2)
-
-        # self.scale(2, 1)
-        self.setScene(self.scene)
+    def dragMoveEvent(self, event: QtGui.QDragMoveEvent) -> None:
+        pass
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         if event.mimeData().hasText():
-            event.acceptProposedAction()
+            event.setAccepted(True)
+            self.dragOver = True
+            self.update()
 
-    def dropEvent(self, event: QtGui.QDropEvent) -> None:
-        print(event.mimeData().text())
+
+    # def dropEvent(self, event: QtGui.QDropEvent) -> None:
+    def dropEvent(self, event: 'QGraphicsSceneDragDropEvent') -> None:
+        name = event.mimeData().text()
+        item_pos = event.scenePos()
+        # item_pos = QPointF(event.position().x()-self.width()/2, event.position().y()-self.height()/2)
+        # item_pos = self.release_pos
+        self.logger(f"item dropped on {item_pos}", 'info')
+        item = self.item_catalog.get_item(name)
+        scene_item = item.get_scene_item()
+        scene_item.set_position(item_pos)
+        if not item:
+            self.logger(f"Отсутствует соответствие названия в каталоге для {name}", 'error')
+            event.acceptProposedAction()
+            return
+
+        self.addItem(scene_item)
         event.acceptProposedAction()
 
-    def drawBackground(self, painter: QtGui.QPainter, rect: QtCore.QRectF) -> None:
-        background_brush = QtGui.QBrush(QtGui.QColor(255, 170, 255), Qt.BrushStyle.SolidPattern)
-        pen = QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.DashDotDotLine)
-        painter.setPen(pen)
-        painter.drawLine(QPointF(rect.bottomLeft().x(), rect.center().y()),
-                         QPointF(rect.bottomRight().x(), rect.center().y()))
 
+
+    # def __init__(self):
+    #     super().__init__()
+    #     self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+    #     # cnv = Canvas(self.height(), self.width())
+    #     # print(self.height(), self.width())
+    #     cnv = ControlView()
+    #     lo = QVBoxLayout()
+    #     lo.addWidget(cnv)
+    #     self.setLayout(lo)
+
+
+class ControlView(QGraphicsView):
+    cell_size = 80
+    grid_pen = QPen(Qt.GlobalColor.lightGray, 1, Qt.PenStyle.DashDotDotLine)
+    axis_pen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.DashDotDotLine)
+    _zoom = 0
+    # scene_items:list[] = []
+    # ControlViewClicked = QtCore.pyqtSignal(QtCore.QPoint)
+
+    # def __init__(self,
+    #              item_catalog: ItemsCollectionInterface,
+    #              logger_fun: Callable[[str, str], None],
+    #              status_bar: Callable[[str], None],
+    #              props_displayer: Callable[[dict, str], None]):
+    def __init__(self,
+                 item_catalog: ItemsCollectionInterface,
+                 logger_fun: Callable[[str,str], None],
+                 status_bar: Callable[[str], None]):
+    # def __init__(self,
+    #              item_catalog: ItemsCollectionInterface,
+    #              logger_fun: Callable[[str,str], None]):
+        super().__init__()
+
+        # self.CVScene = QGraphicsScene()
+        self.CVScene = GraphicsScene()
+        self.CVScene.status_bar = status_bar
+        self.CVScene.logger = logger_fun
+        self.CVScene.item_catalog = item_catalog
+        # self.CVScene.setSceneRect(self.rect().x(), self.rect().y(), self.width(), self.height())
+        self.item_catalog = item_catalog
+        self.logger = logger_fun
+
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setBackgroundBrush(Qt.GlobalColor.lightGray)
+        self.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        self.setObjectName('ControlView')
+        self.setScene(self.CVScene)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
+        self.setAcceptDrops(True)
+        # self.DragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        # self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.dragOver = False
+
+    def mousePressEvent(self, event):
+        # self.ControlViewClicked.emit(self.mapToScene(event.pos()).toPoint())
+        # if event.button() == Qt.MouseButton.RightButton:
+        #     self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        # else:
+        #     self.setDragMode(QGraphicsView.DragMode.NoDrag)
+
+        super(ControlView, self).mousePressEvent(event)
+
+    def drawBackground(self, painter: QtGui.QPainter, rect: QtCore.QRectF) -> None:
+        painter.save()
+        painter.setPen(self.grid_pen)
+        # draw y lines
+        y_pos = 0
+        while y_pos>rect.top():
+            painter.drawLine(QPointF(rect.left(), y_pos),
+                             QPointF(rect.right(), y_pos),)
+            y_pos-=self.cell_size
+        y_pos = 0
+        while y_pos<rect.bottom():
+            painter.drawLine(QPointF(rect.left(), y_pos),
+                             QPointF(rect.right(), y_pos),)
+            y_pos+=self.cell_size
+
+        # draw x lines
+        x_pos = 0
+        while x_pos>rect.left():
+            painter.drawLine(QPointF(x_pos, rect.bottom()),
+                             QPointF(x_pos, rect.top()),)
+            x_pos-=self.cell_size
+        x_pos = 0
+        while x_pos<rect.right():
+            painter.drawLine(QPointF(x_pos, rect.bottom()),
+                             QPointF(x_pos, rect.top()),)
+            x_pos+=self.cell_size
+
+        # draw axis
+        painter.setPen(self.axis_pen)
+        painter.drawLine(QPointF(rect.left(), 0),QPointF(rect.right(), 0))
+        painter.drawLine(QPointF(0, rect.bottom()),QPointF(0, rect.top()))
+
+
+        painter.restore()
+
+    # def wheelEvent(self, event):
+    #     if event.angleDelta().y() > 0:
+    #         factor = 1.25
+    #         self._zoom += 1
+    #     else:
+    #         factor = 0.8
+    #         self._zoom -= 1
+    #     if self._zoom > 0:
+    #         self.scale(factor, factor)
+    #     elif self._zoom == 0:
+    #         # self.fitInView()
+    #         pass
+    #     else:
+    #         self._zoom = 0
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         if event.angleDelta().y()>0:
-            # self.scale(1.2, 1.2)
-            # self.item1.setRotation(self.item1.rotation()+10)
-            # print(self.item1.rotation())
-            # self.item1.setScale(2)
-            # self.item1.mack_thicker(1.2)
-            # self.item1.mack_longer(1.1)
-            self.item1.scale_object(1.1)
-            self.scene.update()
-            # self.repaint()
+            self.scale(1.1,1.1)
+            # for i in self.items():
+            #     i.scale_object(1.1)
+            #     self.CVScene.update()
+            # self.item1.scale_object(1.1)
         else:
-            # self.scale(0.8, 0.8)
-            # self.item1.setRotation(self.item1.rotation()-10)
-            # print(self.item1.rotation())
-            # self.item1.setScale(0.5)
-            # self.item1.mack_thicker(0.8)
-            # self.item1.mack_longer(0.9)
-            self.item1.scale_object(0.9)
-            self.scene.update()
-            # pass
+            self.scale(0.9,0.9)
+            # for i in self.items():
+            #     i.scale_object(0.9)
+            #     self.CVScene.update()
 
-    # def mousePressEvent(self, event):
-    #     if event.button() == Qt.MouseButton.RightButton:
-    #         self._rightButtonPressed = True
-    #         self._panStartX = event.pos().x()
-    #         self._panStartY = event.pos().y()
-    #         self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
-    # def mouseReleaseEvent(self, event):
-    #     if event.button()==Qt.MouseButton.RightButton:
-    #         self._rightButtonPressed = False
-    #         self.setCursor(Qt.CursorShape.ArrowCursor)
-
-    # def mouseMoveEvent(self, event):
-    #     if self._rightButtonPressed:
-    #         # self.scene.setSceneRect(self.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
-    #         # self.setSceneRect(self.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
-    #         self.scene.setSceneRect(self.scene.sceneRect().translated(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
-    #         # self.scene.setSceneRect(self.scene.sceneRect(). (event.pos().x()-self._panStartX, event.pos().y()-self._panStartY))
-    #         # self.scene.sceneRect().moveTo(event.pos().x()-self._panStartX, event.pos().y()-self._panStartY)
-    #         # self.viewport().move(self.viewport().x()+event.pos().x()-self._panStartX,
-    #         #                      self.viewport().y()+event.pos().y()-self._panStartY)
-    #         self._panStartX = event.pos().x()
-    #         self._panStartY = event.pos().y()
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        self.scene.update()
-        super(ViewArea, self).mouseMoveEvent(event)
-
-    # def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-    #     for i in self.scene.items():
-    #         i.highlight_flag = False
-
-    # def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-    #     self.scene.update()
-    #     super(ViewArea, self).mousePressEvent(event)
-
-
-# # Creates widget to be drawn on
-# class Canvas(QLabel):
-#
-#     def __init__(self, width, height):
-#         super().__init__()
-#
-#         # Create a pixmap object that will act as the canvas
-#         self.pixmap = QPixmap(width, height)
-#         self.pixmap.fill(Qt.GlobalColor.white)
-#         self.setPixmap(self.pixmap)
-#
-#         # Keep track of the mouse for getting mouse coordinates
-#         self.mouse_track_label = QLabel()
-#         # self.setMouseTracking(True)
-#
-#         # Initialize variables
-#         self.antialiasing_status = True
-#         # self.eraser_selected = False
-#
-#         self.last_mouse_pos = QPoint()
-#         self.drawing = False
-#         self.pen_color = Qt.GlobalColor.red
-#         self.pen_width = 2
-#
-#         self.composition_objects = []
-#         self.composition_objects.append(DynamicProtectionElement())
-#
-#         self.drawComposition()
-#
-#
-#     def drawComposition(self):
-#         painter = QPainter(self.pixmap)
-#         if self.antialiasing_status:
-#             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-#
-#         for i in self.composition_objects:
-#             i.draw(painter, QPointF(250, 250))
-#
-#         self.update()
-#
-#     def mousePressEvent(self, event):
-#         """Handle when mouse is pressed."""
-#         if event.button() == Qt.MouseButton.LeftButton:
-#             self.newCanvas()
-#             self.composition_objects[-1].tilt_angle +=10
-#             print(self.composition_objects[-1].tilt_angle)
-#             self.drawComposition()
-#
-#
-#     def mouseReleaseEvent(self, event):
-#         """Handle when mouse is released.
-#         Check when eraser is no longer being used."""
-#         if event.button() == Qt.MouseButton.LeftButton:
-#             self.drawing = False
-#
-#     def newCanvas(self):
-#         """Clears the current canvas."""
-#         self.pixmap.fill(Qt.GlobalColor.white) # fixme
-#         self.update()
-#
-#     def paintEvent(self, event):
-#         """Create QPainter object.
-#         This is to prevent the chance of the painting being lost
-#         if the user changes windows."""
-#         painter = QPainter(self)
-#         target_rect = QRect()
-#         target_rect = event.rect()
-#         painter.drawPixmap(target_rect, self.pixmap, target_rect)
-#         painter.end()
+        self.CVScene.update()
+        super(ControlView, self).mouseMoveEvent(event)
 
 
 if __name__=='__main__':

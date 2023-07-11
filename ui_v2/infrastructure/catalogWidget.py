@@ -6,7 +6,7 @@ from ui_v2.infrastructure.Spacers import VSpacer
 
 class SceneItemsCatalog(QWidget):
 
-    def __init__(self):
+    def __init__(self, column_count: int = 2):
         super().__init__()
         self.main_layout = QVBoxLayout()
 
@@ -16,13 +16,15 @@ class SceneItemsCatalog(QWidget):
 
         scrollArea = QScrollArea()
         scrollArea.setWidgetResizable(True)
+        scrollArea.horizontalScrollBar().setStyleSheet("QScrollBar {height:0px;}")
         scrollArea.horizontalScrollBar().hide()
+        scrollArea.verticalScrollBar().setStyleSheet("QScrollBar {width:0px;}")
         scrollArea.verticalScrollBar().hide()
         widget_for_scroll_area = QWidget()
         widget_for_scroll_area.setLayout(self.layoutGrid)
         scrollArea.setWidget(widget_for_scroll_area)
 
-        self.max_columns = 1
+        self.max_columns = column_count-1
 
         self.cur_col = 0
         self.cur_row = 0
@@ -53,9 +55,12 @@ class SceneItemsCatalog(QWidget):
 
     def test_populate_me(self, img_path: str):
         items_count = 50
+        itms = []
         for i in range(items_count):
             itm = SceneItemWidget('test_itm-{}'.format(i), 'this is test item made for debug use', img_path)
             self.add_item(itm)
+            itms.append(itm)
+        return itms
 
     def add_spacer(self):
         self.layoutGrid.addWidget(self.spacer)

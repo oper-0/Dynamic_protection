@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Protocol  # i really want to use this but abc should be best practice here
+from typing import Protocol, Callable  # i really want to use this but abc should be best practice here
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QMimeData
@@ -20,18 +20,23 @@ class UnknownItem(SceneItemAbstract):
 
 class SceneItemWidget(QWidget):
 
-    def __init__(self, title: str, description: str, img_path: str): # todo finish me
+    def __init__(self, title: str = 'unknown', description: str = 'unknown', img_path: str = '', actor: Callable[[], None] = lambda *args: None, column_count=2): # todo finish me
         super().__init__()
         layout = QVBoxLayout()
 
 
         self.title = title
         self.description = description
+        self.actor = actor
 
         #   image to item:
         self.lb = QLabel()
-        pm = QPixmap(img_path).scaled(100, 100)
-        # pm = QPixmap(img_path).scaled(200, 200)
+        if column_count==1:
+            pm = QPixmap(img_path).scaled(200, 100, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        elif column_count==2:
+            pm = QPixmap(img_path).scaled(100, 100, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        else:
+            pm = QPixmap(img_path)
         self.lb.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         self.lb.setPixmap(pm)
         layout.addWidget(self.lb)
@@ -48,6 +53,9 @@ class SceneItemWidget(QWidget):
         self.setToolTip(description)
 
         self.setLayout(layout)
+
+    def get_scene_item(self):
+        return self.actor()
 
     def mousePressEvent(self, e):
         if e.button() != Qt.MouseButton.LeftButton:
@@ -71,7 +79,9 @@ class SceneItemWidget(QWidget):
         drag.setMimeData(mimedata)
         # drag.setPixmap(self.lb.pixmap().scaled(24, 24))
         drag.setPixmap(self.lb.pixmap())
+        # print(self.lb.size())
         drag.setHotSpot(e.pos())
+        # drag.setHotSpot(e.position())
         drag.exec(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction)
 
 

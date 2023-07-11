@@ -1,9 +1,12 @@
 import typing
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF
+from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF, QDate
 from PyQt6.QtGui import QPainter, QBrush, QPen
-from PyQt6.QtWidgets import QGraphicsItem, QWidget
+from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial, QDoubleSpinBox, QSpinBox, QSlider
+
+from ui_v2.infrastructure.helpers import SceneObjProperty
+
 
 class test_item(QGraphicsItem):
 
@@ -31,20 +34,25 @@ class test_item(QGraphicsItem):
         painter.setPen(self.pen)
         painter.drawRect(self.rect)
 
-class DynamicProtectionElement(QGraphicsItem):
+def NEW_ExplosiveReactiveArmourPlate(property_displayer: typing.Callable[[dict], None]):
+    return ExplosiveReactiveArmourPlate(property_displayer)
 
+
+class ExplosiveReactiveArmourPlate(QGraphicsItem):
     """Calculation parameters"""
+
     _empirical_coefficient: float = 4.5
-    _face_plate_thickness: float = 1.5#*3
-    _rear_plate_thickness: float = 1.5#*3
     _tilt_angle: float = 68
     _face_plate_density: float = 7.85
     _rear_plate_density: float = 7.85
     _dynamic_yield_stress: float = 500
+
     _element_length: float = 260
     _element_width: float = 138
+    _face_plate_thickness: float = 1.5
+    _rear_plate_thickness: float = 1.5
+    _explosive_layer_thickness: float = 10
 
-    _explosive_layer_thickness: float = 10#*3
     _explosive_density: float = 1.6
     _explosive_detonation_velocity: float = 8000
     _explosive_detonation_critical_diameter: float = 0.5
@@ -59,7 +67,105 @@ class DynamicProtectionElement(QGraphicsItem):
     _distance: float = 0
 
     """Drawing parameters"""
+    # _scale_coefficient = 3
+    #
+    # _element_length_2draw: float = _element_length * _scale_coefficient
+    # _element_width_2draw: float = _element_width * _scale_coefficient
+    # _face_plate_thickness_2draw: float = _face_plate_thickness * _scale_coefficient
+    # _rear_plate_thickness_2draw: float = _rear_plate_thickness * _scale_coefficient
+    # _explosive_layer_thickness_2draw: float = _explosive_layer_thickness * _scale_coefficient
+
     position: QPointF = QPointF(0, 0)
+    pen: QPen = QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine)
+    brush: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense6Pattern)
+
+    """Closures to MainWindow"""
+    # Функция виджета основного окна для отображения свойств элемента. {'Эмпирический коэффициент': _empirical_coefficient, ...}
+    _show_properties: typing.Callable[[dict], None]
+
+    def __init__(self, property_displayer: typing.Callable[[dict], None]):
+        super().__init__()
+        self.property_displayer = property_displayer
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+
+        self.rect = self._get_rect()
+
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        props = self._get_props_dict()
+        self.property_displayer(props)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+
+    def boundingRect(self):
+        return self.rect
+
+    def set_position(self,pos:QPointF):
+        # self.position=pos
+        self.rect.moveTo(pos)
+
+    def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
+        painter.setBrush(self.brush)
+        painter.setPen(self.pen)
+        # painter.drawRect(self._get_rect())
+        painter.drawRect(self.rect)
+
+    def _get_rect(self):
+        return QRectF(
+            QPointF(self.position.x() - self._explosive_layer_thickness / 2 - self._face_plate_thickness,
+                    self.position.y() - self._element_length / 2),
+            QPointF(self.position.x() + self._explosive_layer_thickness / 2 - self._rear_plate_thickness,
+                    self.position.y() + self._element_length / 2))
+
+    def _get_props_dict(self) -> list[SceneObjProperty]:
+        return [SceneObjProperty(key='test_val_0', widget=QCheckBox()),
+                SceneObjProperty(key='test_val_1', widget=QDateEdit(QDate(1952, 10, 7))),
+                SceneObjProperty(key='test_val_2', widget=QDial()),
+                SceneObjProperty(key='test_val_3', widget=QDoubleSpinBox()),
+                SceneObjProperty(key='test_val_3', widget=QSpinBox()),
+                SceneObjProperty(key='test_val_4', widget=QSlider())]
+
+class DynamicProtectionElement(QGraphicsItem):
+
+    """Calculation parameters"""
+    _scale_coefficient = 3
+
+    _empirical_coefficient: float = 4.5
+    _tilt_angle: float = 68
+    _face_plate_density: float = 7.85
+    _rear_plate_density: float = 7.85
+    _dynamic_yield_stress: float = 500
+
+    _element_length: float = 260#*_scale_coefficient
+    _element_width: float = 138#*_scale_coefficient
+    _face_plate_thickness: float = 1.5#*_scale_coefficient
+    _rear_plate_thickness: float = 1.5#*_scale_coefficient
+    _explosive_layer_thickness: float = 10#*_scale_coefficient
+
+    _element_length_2draw: float = _element_length*_scale_coefficient
+    _element_width_2draw: float = _element_width*_scale_coefficient
+    _face_plate_thickness_2draw: float = _face_plate_thickness*_scale_coefficient
+    _rear_plate_thickness_2draw: float = _rear_plate_thickness*_scale_coefficient
+    _explosive_layer_thickness_2draw: float = _explosive_layer_thickness*_scale_coefficient
+
+    _explosive_density: float = 1.6
+    _explosive_detonation_velocity: float = 8000
+    _explosive_detonation_critical_diameter: float = 0.5
+
+    _detonation_products_polytropic_index: float = 3
+    _detonation_product_velocity_parameter_z: float = 0.16667
+    _detonation_product_velocity_parameter_r: float = 0.08333
+    _detonation_pressure: float = 20000
+
+    _average_pressure_coefficient: float = 0.8
+
+    _distance: float = 0
+
+    """Drawing parameters"""
+    # position: QPointF
 
     border_pen: QPen = QPen(Qt.GlobalColor.black, 1)
 
@@ -70,7 +176,7 @@ class DynamicProtectionElement(QGraphicsItem):
     rear_plate_brush_highlight: QBrush = QBrush(Qt.GlobalColor.blue, Qt.BrushStyle.SolidPattern)
     explosion_brush_highlight: QBrush = QBrush(Qt.GlobalColor.yellow, Qt.BrushStyle.SolidPattern)
 
-    def __init__(self):
+    def __init__(self, position: QPointF = QPointF(0, 0)):
         super().__init__()
         # self.setRotation(45)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
@@ -82,27 +188,30 @@ class DynamicProtectionElement(QGraphicsItem):
         # self.checked_effect.setEnabled(False)
         # self.setGraphicsEffect(self.checked_effect)
 
+        # self.position = position
+
         self.highlight_flag = False
 
     def mouseMoveEvent(self, event):
-        self.position=event.pos()
+        # print('mouse moving')
+        # self.position=event.scenePos()
         super(DynamicProtectionElement, self).mouseMoveEvent(event)
 
     def boundingRect(self) -> QRectF:
         return self.getBoundingRect
 
-    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        # self.checked_effect.setEnabled(True)
-        ...
-
-    def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        self.highlight_flag = True
-
-    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
-        # self.checked_effect.setEnabled(False)
-        # self.position = event.pos()
-        # print(f"psition is {self.position}")
-        ...
+    # def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+    #     # self.checked_effect.setEnabled(True)
+    #     ...
+    #
+    # def mouseDoubleClickEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+    #     self.highlight_flag = True
+    #
+    # def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+    #     # self.checked_effect.setEnabled(False)
+    #     # self.position = event.pos()
+    #     # print(f"psition is {self.position}")
+    #     ...
 
     # def itemChange(self, change: 'QGraphicsItem.GraphicsItemChange', value: typing.Any) -> typing.Any:
     #     if change==QGraphicsItem.GraphicsItemChange.ItemPositionChange:
@@ -115,23 +224,36 @@ class DynamicProtectionElement(QGraphicsItem):
 
         # positon = QPointF(0, 0)
         # self.position = QPointF(0, self.position.y())
-        positon = self.position
+        positon = self.scenePos()
         # positon = self.pos()
-        print(f"pos is {self.position}")
+        # print(f"pos is {self.position}")
         painter.setPen(self.border_pen)
 
+        # face_plate_rect = QRect(
+        #     QPoint(int(positon.x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness),
+        #            int(positon.y() - self.element_length / 2)),
+        #     QSize(int(self.face_plate_thickness), int(self.element_length)))
+        #
+        # explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness / 2),
+        #                                     int(positon.y() - self.element_length / 2)),
+        #                              QSize(int(self.explosive_layer_thickness), int(self.element_length)))
+        #
+        # rear_plate_rect = QRect(QPoint(int(positon.x() + self.explosive_layer_thickness / 2),
+        #                                int(positon.y() - self.element_length / 2)),
+        #                         QSize(int(self.rear_plate_thickness), int(self.element_length)))
+
         face_plate_rect = QRect(
-            QPoint(int(positon.x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness),
-                   int(positon.y() - self.element_length / 2)),
-            QSize(int(self.face_plate_thickness), int(self.element_length)))
+            QPoint(int(positon.x() - self._explosive_layer_thickness_2draw / 2 - self._face_plate_thickness_2draw),
+                   int(positon.y() - self._element_length_2draw / 2)),
+            QSize(int(self._face_plate_thickness_2draw), int(self._element_length_2draw)))
 
-        explosion_layer_rect = QRect(QPoint(int(positon.x() - self.explosive_layer_thickness / 2),
-                                            int(positon.y() - self.element_length / 2)),
-                                     QSize(int(self.explosive_layer_thickness), int(self.element_length)))
+        explosion_layer_rect = QRect(QPoint(int(positon.x() - self._explosive_layer_thickness_2draw / 2),
+                                            int(positon.y() - self._element_length_2draw / 2)),
+                                     QSize(int(self._explosive_layer_thickness_2draw), int(self._element_length_2draw)))
 
-        rear_plate_rect = QRect(QPoint(int(positon.x() + self.explosive_layer_thickness / 2),
-                                       int(positon.y() - self.element_length / 2)),
-                                QSize(int(self.rear_plate_thickness), int(self.element_length)))
+        rear_plate_rect = QRect(QPoint(int(positon.x() + self._explosive_layer_thickness_2draw / 2),
+                                       int(positon.y() - self._element_length_2draw / 2)),
+                                QSize(int(self._rear_plate_thickness_2draw), int(self._element_length_2draw)))
 
         if self.highlight_flag:
             painter.fillRect(face_plate_rect, self.face_plate_brush_highlight)
@@ -151,8 +273,9 @@ class DynamicProtectionElement(QGraphicsItem):
 
 
 
-        # painter.drawEllipse(self.pos(), 10, 10)
-        painter.drawEllipse(self.position)
+        painter.drawEllipse(self.scenePos(), 10, 10)
+        # painter.drawEllipse(self.position)
+        # painter.drawEllipse(self.position)
         # tmp_pen = QPen(Qt.GlobalColor.green, 1)
         # painter.setPen(tmp_pen)
         # self.border_pen.setColor(Qt.GlobalColor.green)
@@ -189,7 +312,6 @@ class DynamicProtectionElement(QGraphicsItem):
     # def mack_longer(self, coeff) -> None:
     #     self._element_length *= coeff
 
-
     @property
     def getBoundingRect(self):
         # return QRectF(QPointF(self.pos().x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness,
@@ -197,10 +319,16 @@ class DynamicProtectionElement(QGraphicsItem):
         #               QPointF(self.pos().x() + self.explosive_layer_thickness / 2 - self.rear_plate_thickness,
         #                       self.pos().y() + self.element_length / 2))
 
-        return QRectF(QPointF(self.position.x() - self.explosive_layer_thickness / 2 - self.face_plate_thickness,
-                              self.position.y() - self.element_length / 2),
-                      QPointF(self.position.x() + self.explosive_layer_thickness / 2 - self.rear_plate_thickness,
-                              self.position.y() + self.element_length / 2))
+        # return QRectF(QPointF(self.position.x() - self._explosive_layer_thickness_2draw / 2 - self._face_plate_thickness_2draw,
+        #                       self.position.y() - self._element_length_2draw / 2),
+        #               QPointF(self.position.x() + self._explosive_layer_thickness_2draw / 2 - self._rear_plate_thickness_2draw,
+        #                       self.position.y() + self._element_length_2draw / 2))
+
+        return QRectF(
+            QPointF(self.scenePos().x() - self._explosive_layer_thickness_2draw / 2 - self._face_plate_thickness_2draw,
+                    self.scenePos().y() - self._element_length_2draw / 2),
+            QPointF(self.scenePos().x() + self._explosive_layer_thickness_2draw / 2 - self._rear_plate_thickness_2draw,
+                    self.scenePos().y() + self._element_length_2draw / 2))
 
     @property
     def empirical_coefficient(self):
