@@ -27,6 +27,8 @@ class PropertyDisplayer(QWidget):
         :param type: 'shield' or 'shell'
         """
         # self.props_fields = []
+        for r in range(self.layout_1_shield_props.rowCount()):
+            self.layout_1_shield_props.removeRow(0)
         for p in properties:
             self.layout_1_shield_props.addRow(QLabel(p.key), p.widget)
 

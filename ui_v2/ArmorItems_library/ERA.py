@@ -49,7 +49,7 @@ class RUBBER_BAR(SceneItemWidget):
     """
     just some rubber bar
     """
-
+    
     def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
         super().__init__(title='Резина',
                          description='Случайный кусок резины ¯\_(ツ)_/¯. Тестовый item, потом удалить',

@@ -2,9 +2,11 @@ import typing
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF, QDate
-from PyQt6.QtGui import QPainter, QBrush, QPen
-from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial, QDoubleSpinBox, QSpinBox, QSlider
+from PyQt6.QtGui import QPainter, QBrush, QPen, QTransform
+from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial, QDoubleSpinBox, QSpinBox, QSlider, \
+    QLineEdit
 
+from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, LabelAndSpin, DoubleSpinBoxMod1
 from ui_v2.infrastructure.helpers import SceneObjProperty
 
 
@@ -35,14 +37,15 @@ class test_item(QGraphicsItem):
         painter.drawRect(self.rect)
 
 def NEW_ExplosiveReactiveArmourPlate(property_displayer: typing.Callable[[dict], None]):
-    return ExplosiveReactiveArmourPlate(property_displayer)
+    return lambda :ExplosiveReactiveArmourPlate(property_displayer)
+    # return ExplosiveReactiveArmourPlate(property_displayer) # fixme раньше ретунил класс, но тпеерь инстанс -> сингл
 
 
 class ExplosiveReactiveArmourPlate(QGraphicsItem):
     """Calculation parameters"""
 
     _empirical_coefficient: float = 4.5
-    _tilt_angle: float = 68
+    _tilt_angle: float = 0
     _face_plate_density: float = 7.85
     _rear_plate_density: float = 7.85
     _dynamic_yield_stress: float = 500
@@ -64,7 +67,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     _average_pressure_coefficient: float = 0.8
 
-    _distance: float = 0
+    # _distance: float = 0
 
     """Drawing parameters"""
     # _scale_coefficient = 3
@@ -120,13 +123,157 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
             QPointF(self.position.x() + self._explosive_layer_thickness / 2 - self._rear_plate_thickness,
                     self.position.y() + self._element_length / 2))
 
+
     def _get_props_dict(self) -> list[SceneObjProperty]:
-        return [SceneObjProperty(key='test_val_0', widget=QCheckBox()),
-                SceneObjProperty(key='test_val_1', widget=QDateEdit(QDate(1952, 10, 7))),
-                SceneObjProperty(key='test_val_2', widget=QDial()),
-                SceneObjProperty(key='test_val_3', widget=QDoubleSpinBox()),
-                SceneObjProperty(key='test_val_3', widget=QSpinBox()),
-                SceneObjProperty(key='test_val_4', widget=QSlider())]
+
+        wgt_empirical_coefficient = QLineEdit(str(self._empirical_coefficient))
+        wgt_empirical_coefficient.textChanged.connect(self.set_empirical_coefficient)
+
+        wgt_face_plate_thickness = DoubleSpinBoxMod1()
+        wgt_face_plate_thickness.setValue(self._face_plate_thickness)
+        wgt_face_plate_thickness.valueChanged.connect(self.set_face_plate_thickness)
+
+        wgt_rear_plate_thickness = DoubleSpinBoxMod1()
+        wgt_rear_plate_thickness.setValue(self._rear_plate_thickness)
+        wgt_rear_plate_thickness.valueChanged.connect(self.set_rear_plate_thickness)
+
+        wgt_tilt_angle = LabelAndSlider(min_val=-90, max_val=90, val=self._tilt_angle, postfix='°')
+        wgt_tilt_angle.slider.valueChanged.connect(self.set_tilt_angle)
+
+        wgt_face_plate_density = QLineEdit(str(self._face_plate_density))
+        wgt_face_plate_density.textChanged.connect(self.set_face_plate_density)
+
+        wgt_rear_plate_density = QLineEdit(str(self._rear_plate_density))
+        wgt_rear_plate_density.textChanged.connect(self.set_rear_plate_density)
+
+        wgt_dynamic_yield_stress = QLineEdit(str(self._dynamic_yield_stress))
+        wgt_dynamic_yield_stress.textChanged.connect(self.set_dynamic_yield_stress)
+
+        wgt_element_length = DoubleSpinBoxMod1()
+        wgt_element_length.setValue(self._element_length)
+        wgt_element_length.valueChanged.connect(self.set_element_length)
+
+        wgt_element_width = DoubleSpinBoxMod1()
+        wgt_element_width.setValue(self._element_width)
+        wgt_element_width.valueChanged.connect(self.set_element_width)
+
+        wgt_explosive_layer_thickness = DoubleSpinBoxMod1()
+        wgt_explosive_layer_thickness.setValue(self._explosive_layer_thickness)
+        wgt_explosive_layer_thickness.valueChanged.connect(self.set_explosive_layer_thickness)
+
+        wgt_explosive_density = QLineEdit(str(self._explosive_density))
+        wgt_explosive_density.textChanged.connect(self.set_explosive_density)
+
+        wgt_explosive_detonation_velocity = QLineEdit(str(self._explosive_detonation_velocity))
+        wgt_explosive_detonation_velocity.textChanged.connect(self.set_explosive_detonation_velocity)
+
+        wgt_explosive_detonation_critical_diameter = QLineEdit(str(self._explosive_detonation_critical_diameter))
+        wgt_explosive_detonation_critical_diameter.textChanged.connect(self.set_explosive_detonation_critical_diameter)
+
+        wgt_detonation_products_polytropic_index = QLineEdit(str(self._detonation_products_polytropic_index))
+        wgt_detonation_products_polytropic_index.textChanged.connect(self.set_detonation_products_polytropic_index)
+
+        wgt_detonation_product_velocity_parameter_z = QLineEdit(str(self._detonation_product_velocity_parameter_z))
+        wgt_detonation_product_velocity_parameter_z.textChanged.connect(self.set_detonation_product_velocity_parameter_z)
+
+        wgt_detonation_product_velocity_parameter_r = QLineEdit(str(self._detonation_product_velocity_parameter_r))
+        wgt_detonation_product_velocity_parameter_r.textChanged.connect(self.set_detonation_product_velocity_parameter_r)
+
+        wgt_detonation_pressure = QLineEdit(str(self._detonation_pressure))
+        wgt_detonation_pressure.textChanged.connect(self.set_detonation_pressure)
+
+        wgt_average_pressure_coefficient = QLineEdit(str(self._average_pressure_coefficient))
+        wgt_average_pressure_coefficient.textChanged.connect(self.set_average_pressure_coefficient)
+
+
+        result = [
+            SceneObjProperty(key='Эмпирический коэффициент [ν]:', widget=wgt_empirical_coefficient),
+            SceneObjProperty(key='Толщина лицевой пластины [δ1]', widget=wgt_face_plate_thickness),
+            SceneObjProperty(key='Толщина тыльной пластины [δ2]', widget=wgt_rear_plate_thickness),
+            SceneObjProperty(key='Угол атаки [θ]:', widget=wgt_tilt_angle),
+            SceneObjProperty(key='Плотность лицевой пластины [ρ1]', widget=wgt_face_plate_density),
+            SceneObjProperty(key='Плотность тыльной пластины [ρ2]', widget=wgt_rear_plate_density),
+            SceneObjProperty(key='Динамический предел текучести материала пластин [Q]', widget=wgt_dynamic_yield_stress),
+            SceneObjProperty(key='Длина пластины [a]', widget=wgt_element_length),
+            SceneObjProperty(key='Ширина пластины [b]', widget=wgt_element_width),
+            SceneObjProperty(key='Толщина слоя ВВ [h]', widget=wgt_explosive_layer_thickness),
+            SceneObjProperty(key='Плотность ВВ [ρ]', widget=wgt_explosive_density),
+            SceneObjProperty(key='Скорость детонации заряда ВВ [D]', widget=wgt_explosive_detonation_velocity),
+            SceneObjProperty(key='Критический диаметр детонации ВВ [dкр]', widget=wgt_explosive_detonation_critical_diameter),
+            SceneObjProperty(key='Показатель политропы продутов детонации [k]', widget=wgt_detonation_products_polytropic_index),
+            SceneObjProperty(key='Распределение z скоростей продуктов детонации [ξz]', widget=wgt_detonation_product_velocity_parameter_z),
+            SceneObjProperty(key='Распределение r скоростей продуктов детонации [ξr]', widget=wgt_detonation_product_velocity_parameter_r),
+            SceneObjProperty(key='Давление детонации [Pн]', widget=wgt_detonation_pressure),
+            SceneObjProperty(key='Коэффициент для среднего давления [σ]', widget=wgt_average_pressure_coefficient)
+        ]
+
+        return result
+
+    """PROPERTIES"""
+    def set_empirical_coefficient(self, value):
+        self._empirical_coefficient = value
+
+    def set_face_plate_thickness(self, value):
+        self._face_plate_thickness = value
+        self.rect = self._get_rect()
+        self.update()
+
+    def set_rear_plate_thickness(self, value):
+        self._rear_plate_thickness = value
+        self.rect = self._get_rect()
+        self.update()
+
+    def set_tilt_angle(self, value):
+        self._tilt_angle = value
+        transform = QTransform()
+        transform.translate(self.rect.center().x(), self.rect.center().y()).rotate(value).translate(-self.rect.center().x(), -self.rect.center().y())
+        self.setTransform(transform)
+
+    def set_face_plate_density(self, value):
+        self._face_plate_density = value
+
+    def set_rear_plate_density(self, value):
+        self._rear_plate_density = value
+
+    def set_dynamic_yield_stress(self, value):
+        self._dynamic_yield_stress = value
+
+    def set_element_length(self, value):
+        self._element_length = value
+        self.rect = self._get_rect()
+        self.update()
+
+    def set_element_width(self, value):
+        self._element_width = value
+
+    def set_explosive_layer_thickness(self, value):
+        self._explosive_layer_thickness = value
+        self.rect = self._get_rect()
+        self.update()
+
+    def set_explosive_density(self, value):
+        self._explosive_density = value
+
+    def set_explosive_detonation_velocity(self, value):
+        self._explosive_detonation_velocity = value
+
+    def set_explosive_detonation_critical_diameter(self, value):
+        self._explosive_detonation_critical_diameter = value
+
+    def set_detonation_products_polytropic_index(self, value):
+        self._detonation_products_polytropic_index = value
+
+    def set_detonation_product_velocity_parameter_z(self, value):
+        self._detonation_product_velocity_parameter_z = value
+
+    def set_detonation_product_velocity_parameter_r(self, value):
+        self._detonation_product_velocity_parameter_r = value
+
+    def set_detonation_pressure(self, value):
+        self._detonation_pressure = value
+
+    def set_average_pressure_coefficient(self, value):
+        self._average_pressure_coefficient = value
 
 class DynamicProtectionElement(QGraphicsItem):
 

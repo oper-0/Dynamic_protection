@@ -6,26 +6,10 @@ from functools import singledispatchmethod
 
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 
-
-
-
-# @dataclass
-# class SceneObjProperty:
-#     key: str
-#     start_value: any
-#     widget_type: any
-
 @dataclass
 class SceneObjProperty:
     key: str
     widget: any
-
-# PROPERTY_STRUCT = namedtuple('PROPERTY_STRUCT', [
-#     'key',
-#     'start_value',
-#     'widget_type'
-# ])
-
 
 class ItemsCollectionInterface(Protocol):
 
