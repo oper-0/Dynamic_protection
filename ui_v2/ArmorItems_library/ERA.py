@@ -3,9 +3,9 @@ from typing import Callable
 
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
-from ui_v2.infrastructure.SceneObjects import SceneItemWidget
+from ui_v2.infrastructure.SceneObjects import SceneItemWidget, SceneItemWidgetSHELL
 from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item, ExplosiveReactiveArmourPlate, \
-    NEW_ExplosiveReactiveArmourPlate
+    NEW_ExplosiveReactiveArmourPlate, NEW_CustomizableSell
 
 
 class ERA_KONTAKT_1_SQ(SceneItemWidget):
@@ -67,6 +67,19 @@ class STEEL_SHEET(SceneItemWidget):
                          img_path=os.path.join(img_dir_path, 'steel_sheet.png'))
 
 
+class SHELL_CUSTOMIZABLE(SceneItemWidget):
+    """
+    ПГ-7В
+    """
+
+    def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
+        super().__init__(title='НАСТРАИВАЕМЫЙ',
+                         description='Снаряд с случайными параметрами',
+                         img_path=os.path.join(img_dir_path, 'shell_ghost.png'),
+                         column_count=1,
+                         actor=NEW_CustomizableSell(property_displayer))
+
+
 class SHELL_PG_7V(SceneItemWidget):
     """
     ПГ-7В
@@ -101,9 +114,10 @@ def generate_catalog_shield(img_dir_path: str, property_displayer: Callable[[dic
     return item_list
 
 
-def generate_catalog_shell(img_dir_path: str) -> list[SceneItemWidget]:
+def generate_catalog_shell(img_dir_path: str, property_displayer: Callable[[dict], None]) -> list[SceneItemWidget]:
     item_list = [
-        SHELL_PG_7V(img_dir_path, lambda *args: None),
-        SHELL_KORNET(img_dir_path, lambda *args: None)
+        SHELL_CUSTOMIZABLE(img_dir_path, property_displayer),
+        SHELL_PG_7V(img_dir_path, property_displayer),
+        SHELL_KORNET(img_dir_path, property_displayer)
     ]
     return item_list

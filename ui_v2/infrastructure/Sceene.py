@@ -3,13 +3,13 @@ import time
 from typing import Callable
 
 from PyQt6 import QtGui, QtWidgets, QtCore
-from PyQt6.QtCore import Qt, QPoint, QRect, QPointF
-from PyQt6.QtGui import QPainter, QPixmap, QPen, QColor, QImage, QBrush
+from PyQt6.QtCore import Qt, QPoint, QRect, QPointF, QLine, QLineF
+from PyQt6.QtGui import QPainter, QPixmap, QPen, QColor, QImage, QBrush, QTextOption
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGraphicsScene, QGraphicsView, \
-    QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy
+    QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy, QGraphicsTextItem
 
 from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item
-from ui_v2.infrastructure.helpers import ItemsCollectionInterface
+from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene
 
 
 class GraphicsScene(QGraphicsScene):
@@ -18,15 +18,69 @@ class GraphicsScene(QGraphicsScene):
     logger: Callable[[str,str], None]
     item_catalog: ItemsCollectionInterface
 
+    scene_obj_distance_lines: list[QLineF]
+    scene_obj_distance_vertical_lines: list[QLineF]
+    scene_obj_distance_text: list[TextOnScene]
+    # scene_obj_distance_text_options: QTextOption = QTextOption(Qt.AlignmentFlag.AlignCenter)
+
+    distance_lines_pen = QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine)
+    distance_vertical_lines_pen = QPen(Qt.GlobalColor.darkRed, 1, Qt.PenStyle.DashLine)
+
+    v_line_delta = 150
+
+
 
     # def __int__(self):
     #     self.setSceneRect(0, 0, self.GraphicsView.width(), self.GraphicsView.height())
 
     def drawForeground(self, painter, rect):
         super(GraphicsScene, self).drawForeground(painter, rect)
+        painter.save()
+
+        # DRAW DISTANCE-LINES BETWEEN OBJECTS ON THE SCENE
+        self.scene_obj_distance_lines = []
+        self.scene_obj_distance_vertical_lines = []
+        self.scene_obj_distance_text = []
+        obj_positions: list[QPointF] = self._get_obj_positions(y_delta=self.v_line_delta)
+        obj_positions.sort(key=lambda p: p.x())
+        if len(obj_positions)>1:
+            prev_pos = obj_positions[0]
+
+            # first vertical line
+            # v_line = QLineF(prev_pos, QPointF(prev_pos.x(), prev_pos.y() + self.v_line_delta))
+            v_line = QLineF(QPointF(prev_pos.x(), 0), prev_pos)
+            self.scene_obj_distance_vertical_lines.append(v_line)
+
+            for obj_pos in obj_positions[1:]:
+                # horizontal line
+                line = QLineF(prev_pos, obj_pos)
+                self.scene_obj_distance_lines.append(line)
+
+                # vertical line
+                # v_line = QLineF(obj_pos, QPointF(obj_pos.x(), obj_pos.y()+self.v_line_delta))
+                v_line = QLineF(QPointF(obj_pos.x(), 0), obj_pos)
+                self.scene_obj_distance_vertical_lines.append(v_line)
+
+                text_item = TextOnScene(
+                    position=QPointF(line.p1().x()+line.length()/2, line.p1().y()+15),
+                    text=f'{int(line.length())}'
+                )
+                self.scene_obj_distance_text.append(text_item)
+
+                prev_pos = obj_pos
+            # v lines
+            painter.setPen(self.distance_vertical_lines_pen)
+            painter.drawLines(self.scene_obj_distance_vertical_lines)
+            # h lines
+            painter.setPen(self.distance_lines_pen)
+            painter.drawLines(self.scene_obj_distance_lines)
+            # text
+            for ti in self.scene_obj_distance_text:
+                painter.drawText(ti.position, ti.text)
+
+        #  DRAW CROSS UNDER MOUSE
         if not hasattr(self, "cursor_position"):
             return
-        painter.save()
         pen = QPen(Qt.GlobalColor.cyan)
         pen.setWidth(1)
         painter.setPen(pen)
@@ -66,62 +120,53 @@ class GraphicsScene(QGraphicsScene):
     # def dropEvent(self, event: QtGui.QDropEvent) -> None:
     def dropEvent(self, event: 'QGraphicsSceneDragDropEvent') -> None:
         name = event.mimeData().text()
-        item_pos = event.scenePos()
-        # item_pos = QPointF(event.position().x()-self.width()/2, event.position().y()-self.height()/2)
-        # item_pos = self.release_pos
-        self.logger(f"item dropped on {item_pos}", 'info')
         item = self.item_catalog.get_item(name)
         scene_item = item.get_scene_item()
-        scene_item.set_position(item_pos)
+
+        # 💩 magic code, do not touch:
+        if hasattr(scene_item, 'get_half_height') and callable(scene_item.get_half_height):
+            # item_pos = QPointF(event.scenePos().x(), 0-scene_item.get_half_height())
+            item_pos = QPointF(event.scenePos().x(), 0)
+            self.logger(f"item dropped on {item_pos}", 'info')
+
         if not item:
             self.logger(f"Отсутствует соответствие названия в каталоге для {name}", 'error')
             event.acceptProposedAction()
             return
 
-        self.addItem(scene_item)
+        # 💩 magic code, do not touch:
+        if hasattr(scene_item, 'set_props') and callable(scene_item.set_props):
+            scene_item.set_props()
+        else:
+            scene_item.set_position(item_pos)
+            self.addItem(scene_item)
+
         event.acceptProposedAction()
 
-
-
-    # def __init__(self):
-    #     super().__init__()
-    #     self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-    #     # cnv = Canvas(self.height(), self.width())
-    #     # print(self.height(), self.width())
-    #     cnv = ControlView()
-    #     lo = QVBoxLayout()
-    #     lo.addWidget(cnv)
-    #     self.setLayout(lo)
-
+    def _get_obj_positions(self, y_delta = 0):
+        itms = self.items(Qt.SortOrder.AscendingOrder)
+        poss = []
+        for i in itms:
+            # poss.append(QPointF(i.get_center().x(), i.get_center().y()+y_delta))
+            poss.append(QPointF(i.scenePos().x(), i.scenePos().y()+y_delta))
+        return poss
 
 class ControlView(QGraphicsView):
     cell_size = 80
     grid_pen = QPen(Qt.GlobalColor.lightGray, 1, Qt.PenStyle.DashDotDotLine)
     axis_pen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.DashDotDotLine)
+    axis_pen_x = QPen(Qt.GlobalColor.red, 1, Qt.PenStyle.DashLine)
     _zoom = 0
-    # scene_items:list[] = []
-    # ControlViewClicked = QtCore.pyqtSignal(QtCore.QPoint)
-
-    # def __init__(self,
-    #              item_catalog: ItemsCollectionInterface,
-    #              logger_fun: Callable[[str, str], None],
-    #              status_bar: Callable[[str], None],
-    #              props_displayer: Callable[[dict, str], None]):
     def __init__(self,
                  item_catalog: ItemsCollectionInterface,
                  logger_fun: Callable[[str,str], None],
                  status_bar: Callable[[str], None]):
-    # def __init__(self,
-    #              item_catalog: ItemsCollectionInterface,
-    #              logger_fun: Callable[[str,str], None]):
         super().__init__()
 
-        # self.CVScene = QGraphicsScene()
         self.CVScene = GraphicsScene()
         self.CVScene.status_bar = status_bar
         self.CVScene.logger = logger_fun
         self.CVScene.item_catalog = item_catalog
-        # self.CVScene.setSceneRect(self.rect().x(), self.rect().y(), self.width(), self.height())
         self.item_catalog = item_catalog
         self.logger = logger_fun
 
@@ -136,17 +181,9 @@ class ControlView(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
         self.setAcceptDrops(True)
-        # self.DragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        # self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.dragOver = False
 
     def mousePressEvent(self, event):
-        # self.ControlViewClicked.emit(self.mapToScene(event.pos()).toPoint())
-        # if event.button() == Qt.MouseButton.RightButton:
-        #     self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        # else:
-        #     self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
         super(ControlView, self).mousePressEvent(event)
 
     def drawBackground(self, painter: QtGui.QPainter, rect: QtCore.QRectF) -> None:
@@ -177,8 +214,9 @@ class ControlView(QGraphicsView):
             x_pos+=self.cell_size
 
         # draw axis
-        painter.setPen(self.axis_pen)
+        painter.setPen(self.axis_pen_x)
         painter.drawLine(QPointF(rect.left(), 0),QPointF(rect.right(), 0))
+        painter.setPen(self.axis_pen)
         painter.drawLine(QPointF(0, rect.bottom()),QPointF(0, rect.top()))
 
 
@@ -212,17 +250,6 @@ class ControlView(QGraphicsView):
             #     i.scale_object(0.9)
             #     self.CVScene.update()
 
-
-
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         self.CVScene.update()
         super(ControlView, self).mouseMoveEvent(event)
-
-
-if __name__=='__main__':
-    app = QApplication(sys.argv)
-    mw = QMainWindow()
-    w = Scene()
-    mw.setCentralWidget(w)
-    mw.show()
-    sys.exit(app.exec())

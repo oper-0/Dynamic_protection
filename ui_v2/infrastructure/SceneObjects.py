@@ -89,3 +89,57 @@ class SceneItemWidget(QWidget):
         self.lb.setStyleSheet('background: transparent')
         self.title_text_label.setStyleSheet('color: gray')
         # self.setGraphicsEffect(QtWidgets.Ef)
+
+
+class SceneItemWidgetSHELL(QWidget):
+
+    def __init__(self, title: str = 'unknown', description: str = 'unknown', img_path: str = '', actor: Callable[[], None] = lambda *args: None, column_count=2): # todo finish me
+        super().__init__()
+        layout = QVBoxLayout()
+
+
+        self.title = title
+        self.description = description
+        self.actor = actor
+
+        #   image to item:
+        self.lb = QLabel()
+        if column_count==1:
+            pm = QPixmap(img_path).scaled(200, 100, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        elif column_count==2:
+            pm = QPixmap(img_path).scaled(100, 100, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        else:
+            pm = QPixmap(img_path)
+        self.lb.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+        self.lb.setPixmap(pm)
+        layout.addWidget(self.lb)
+
+
+        #   title to item
+        self.title_text_label = QLabel(self.title)
+        self.title_text_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        self.title_text_label.setFont(QFont('Courier New'))
+        self.title_text_label.setStyleSheet('color: gray')
+        layout.addWidget(self.title_text_label)
+
+        #   tooltip for item
+        self.setToolTip(description)
+
+        self.setLayout(layout)
+
+    def get_scene_item(self):
+        return self.actor()
+
+    def mousePressEvent(self, e):
+        if e.button() != Qt.MouseButton.LeftButton:
+            return
+        self.lb.setStyleSheet('background: lightskyblue')
+        self.title_text_label.setStyleSheet('color: black')
+        # self.setGraphicsEffect(QtWidgets.QGraphicsColorizeEffect())
+        # self.drag_start_position = e.pos()
+
+
+    # def mouseReleaseEvent(self, e):
+    #     self.lb.setStyleSheet('background: transparent')
+    #     self.title_text_label.setStyleSheet('color: gray')
+        # self.setGraphicsEffect(QtWidgets.Ef)

@@ -4,7 +4,16 @@ from dataclasses import dataclass
 from typing import Protocol
 from functools import singledispatchmethod
 
+from PyQt6.QtCore import QPointF
+
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
+
+
+@dataclass
+class TextOnScene:
+    position: QPointF
+    text: str
+
 
 @dataclass
 class SceneObjProperty:

@@ -1,7 +1,8 @@
+import math
 import typing
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF, QDate
+from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF, QDate, QLineF
 from PyQt6.QtGui import QPainter, QBrush, QPen, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial, QDoubleSpinBox, QSpinBox, QSlider, \
     QLineEdit
@@ -10,31 +11,72 @@ from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, LabelAndSpin, Dou
 from ui_v2.infrastructure.helpers import SceneObjProperty
 
 
-class test_item(QGraphicsItem):
+def NEW_CustomizableSell(property_displayer: typing.Callable[[dict], None]):
+    return lambda :CustomizableSell(property_displayer)
 
-    def __init__(self):
-        super().__init__()
 
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+class CustomizableSell():
+    """Calculation parameters"""
 
-        self.pen = QPen(Qt.PenStyle.SolidLine)
-        self.pen.setColor(Qt.GlobalColor.black)
-        self.pen.setWidth(8)
-        self.brush = QBrush(Qt.GlobalColor.red)
+    _jet_material_density: float = 8.96
+    _jet_dynamic_yield_stress: float = 824
+    _jet_diameter: float = 45
+    _jet_velocity: float = 9
+    _jet_diameter_increase_factor: float = 1.2
 
-        self.rect = QRectF(QPointF(0,0),QPointF(15,15))
+    def __init__(self, property_displayer: typing.Callable[[dict], None]):
+        self.property_displayer = property_displayer
 
-    def mouseMoveEvent(self, event):
-        super(test_item, self).mouseMoveEvent(event)
+    def set_props(self):
+        props = self._get_props_dict()
+        self.property_displayer(props)
 
-    def boundingRect(self):
-        return self.rect
+    def _get_props_dict(self) -> list[SceneObjProperty]:
 
-    def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
-        painter.setBrush(self.brush)
-        painter.setPen(self.pen)
-        painter.drawRect(self.rect)
+        wgt_jet_material_density = DoubleSpinBoxMod1()
+        wgt_jet_material_density.setValue(self._jet_material_density)
+        wgt_jet_material_density.valueChanged.connect(self.set_jet_material_density)
+
+
+
+        wgt_jet_dynamic_yield_stress = DoubleSpinBoxMod1()
+        wgt_jet_dynamic_yield_stress.setValue(self._jet_dynamic_yield_stress)
+        wgt_jet_dynamic_yield_stress.valueChanged.connect(self.set_dynamic_yield_stress)
+
+        wgt_jet_diameter = DoubleSpinBoxMod1()
+        wgt_jet_diameter.setValue(self._jet_diameter)
+        wgt_jet_diameter.valueChanged.connect(self.set_jet_diameter)
+
+        wgt_jet_velocity = QLineEdit(str(self._jet_velocity))
+        wgt_jet_velocity.textChanged.connect(self.set_jet_velocity)
+
+        wgt_jet_diameter_increase_factor = DoubleSpinBoxMod1()
+        wgt_jet_diameter_increase_factor.setValue(self._jet_diameter_increase_factor)
+        wgt_jet_diameter_increase_factor.valueChanged.connect(self.set_jet_diameter_increase_factor)
+
+        result = [
+            SceneObjProperty(key='Плотность материала КС [P, г/см3]', widget=wgt_jet_material_density),
+            SceneObjProperty(key='Динамический предел текучести материала КС [Q, МПа]', widget=wgt_jet_dynamic_yield_stress),
+            SceneObjProperty(key='Диаметр КС [d, мм]', widget=wgt_jet_diameter),
+            SceneObjProperty(key='Скорость КС [V, км/]', widget=wgt_jet_velocity),
+            SceneObjProperty(key='Коэффициент увеличения диаметра КС [æ]', widget=wgt_jet_diameter_increase_factor),
+        ]
+        return result
+
+    def set_jet_material_density(self, value):
+        self._jet_material_density = value
+
+    def set_dynamic_yield_stress(self, value):
+        self._dynamic_yield_stress = value
+
+    def set_jet_diameter(self, value):
+        self._jet_diameter = value
+
+    def set_jet_velocity(self, value):
+        self._jet_velocity = value
+
+    def set_jet_diameter_increase_factor(self, value):
+        self._jet_diameter_increase_factor = value
 
 def NEW_ExplosiveReactiveArmourPlate(property_displayer: typing.Callable[[dict], None]):
     return lambda :ExplosiveReactiveArmourPlate(property_displayer)
@@ -92,8 +134,27 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
+
+        self.line = QLineF(-1,0,1,0)
 
         self.rect = self._get_rect()
+
+    def itemChange(self, change, value):
+        if (
+                change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionChange
+                and self.isSelected()
+                and not self.line.isNull()
+        ):
+            p1 = self.line.p1()
+            p2 = self.line.p2()
+            e1 = p2 - p1
+            e2 = value - p1
+            dp = QPointF.dotProduct(e1, e2)
+            l = QPointF.dotProduct(e1, e1)
+            p = p1 + dp * e1 / l
+            return p
+        return super().itemChange(change, value)
 
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         props = self._get_props_dict()
@@ -108,13 +169,24 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     def set_position(self,pos:QPointF):
         # self.position=pos
-        self.rect.moveTo(pos)
+        # self.setPos(pos)
+        print(f"ITEM POSITION IS {pos}")
+        self.setPos(pos)
+        # self.rect.moveTo(pos)
 
     def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
         painter.setBrush(self.brush)
         painter.setPen(self.pen)
         # painter.drawRect(self._get_rect())
         painter.drawRect(self.rect)
+
+    def get_half_height(self):
+        return self.rect.height()*math.cos(self._tilt_angle)/2
+
+    def get_center(self) -> QPointF:
+        return QPointF(self.scenePos().x(), 0)
+        # return self.scenePos()
+        # return self.pos()
 
     def _get_rect(self):
         return QRectF(
@@ -188,22 +260,22 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
         result = [
             SceneObjProperty(key='Эмпирический коэффициент [ν]:', widget=wgt_empirical_coefficient),
-            SceneObjProperty(key='Толщина лицевой пластины [δ1]', widget=wgt_face_plate_thickness),
-            SceneObjProperty(key='Толщина тыльной пластины [δ2]', widget=wgt_rear_plate_thickness),
-            SceneObjProperty(key='Угол атаки [θ]:', widget=wgt_tilt_angle),
-            SceneObjProperty(key='Плотность лицевой пластины [ρ1]', widget=wgt_face_plate_density),
-            SceneObjProperty(key='Плотность тыльной пластины [ρ2]', widget=wgt_rear_plate_density),
-            SceneObjProperty(key='Динамический предел текучести материала пластин [Q]', widget=wgt_dynamic_yield_stress),
-            SceneObjProperty(key='Длина пластины [a]', widget=wgt_element_length),
-            SceneObjProperty(key='Ширина пластины [b]', widget=wgt_element_width),
-            SceneObjProperty(key='Толщина слоя ВВ [h]', widget=wgt_explosive_layer_thickness),
-            SceneObjProperty(key='Плотность ВВ [ρ]', widget=wgt_explosive_density),
-            SceneObjProperty(key='Скорость детонации заряда ВВ [D]', widget=wgt_explosive_detonation_velocity),
-            SceneObjProperty(key='Критический диаметр детонации ВВ [dкр]', widget=wgt_explosive_detonation_critical_diameter),
+            SceneObjProperty(key='Толщина лицевой пластины [δ1, мм]', widget=wgt_face_plate_thickness),
+            SceneObjProperty(key='Толщина тыльной пластины [δ2, мм]', widget=wgt_rear_plate_thickness),
+            SceneObjProperty(key='Угол атаки [θ, град.]:', widget=wgt_tilt_angle),
+            SceneObjProperty(key='Плотность лицевой пластины [ρ1, г/см3]', widget=wgt_face_plate_density),
+            SceneObjProperty(key='Плотность тыльной пластины [ρ2, г/см3]', widget=wgt_rear_plate_density),
+            SceneObjProperty(key='Динамический предел текучести материала пластин [Q, МПа]', widget=wgt_dynamic_yield_stress),
+            SceneObjProperty(key='Длина пластины [a, мм]', widget=wgt_element_length),
+            SceneObjProperty(key='Ширина пластины [b, мм]', widget=wgt_element_width),
+            SceneObjProperty(key='Толщина слоя ВВ [h, мм]', widget=wgt_explosive_layer_thickness),
+            SceneObjProperty(key='Плотность ВВ [ρ, г/см3]', widget=wgt_explosive_density),
+            SceneObjProperty(key='Скорость детонации заряда ВВ [D, м/с]', widget=wgt_explosive_detonation_velocity),
+            SceneObjProperty(key='Критический диаметр детонации ВВ [dкр, мм]', widget=wgt_explosive_detonation_critical_diameter),
             SceneObjProperty(key='Показатель политропы продутов детонации [k]', widget=wgt_detonation_products_polytropic_index),
             SceneObjProperty(key='Распределение z скоростей продуктов детонации [ξz]', widget=wgt_detonation_product_velocity_parameter_z),
             SceneObjProperty(key='Распределение r скоростей продуктов детонации [ξr]', widget=wgt_detonation_product_velocity_parameter_r),
-            SceneObjProperty(key='Давление детонации [Pн]', widget=wgt_detonation_pressure),
+            SceneObjProperty(key='Давление детонации [Pн, МПа]', widget=wgt_detonation_pressure),
             SceneObjProperty(key='Коэффициент для среднего давления [σ]', widget=wgt_average_pressure_coefficient)
         ]
 
@@ -676,7 +748,31 @@ class DynamicProtectionElement(QGraphicsItem):
         self._average_pressure_coefficient = new
 
 
+class test_item(QGraphicsItem):
 
+    def __init__(self):
+        super().__init__()
+
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+
+        self.pen = QPen(Qt.PenStyle.SolidLine)
+        self.pen.setColor(Qt.GlobalColor.black)
+        self.pen.setWidth(8)
+        self.brush = QBrush(Qt.GlobalColor.red)
+
+        self.rect = QRectF(QPointF(0,0),QPointF(15,15))
+
+    def mouseMoveEvent(self, event):
+        super(test_item, self).mouseMoveEvent(event)
+
+    def boundingRect(self):
+        return self.rect
+
+    def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
+        painter.setBrush(self.brush)
+        painter.setPen(self.pen)
+        painter.drawRect(self.rect)
 
 
 

@@ -52,13 +52,14 @@ class mainWindow(QMainWindow):
         self.setWindowTitle("Расчёт ДЗ")
         self.setWindowIcon(self.u_getQIcon('tortoise_1_64.png'))
         self.resize(1600, 800)
-        self._SetToolBar()
         # self._SetMenuBar()  # is it indeed needed?
         self._SetLeftDockArea()
         self._SetRightDockArea()
         self._SetBotDockArea()
         self._SetStatusBar()
         self._SetCentralWidget()  # must be initialized after _SetLeftDockArea 💩
+        self._SetToolBar()
+        self.setCorner(Qt.Corner.BottomRightCorner, Qt.DockWidgetArea.RightDockWidgetArea)
 
     def _SetToolBar(self):
         """
@@ -71,22 +72,24 @@ class mainWindow(QMainWindow):
         self.TOOLBAR.setIconSize(QSize(48, 38))
 
         # tb_item_1 = QToolBarItem
+
+        self.TOOLBAR.addAction(self.u_getQIcon('open-folder.png'), 'Открыть конфигурацию')
+        self.TOOLBAR.actions()[-1].triggered.connect(lambda: self.USER_LOGGER.log('Not implemented yet', 'error'))
+
+        self.TOOLBAR.addAction(self.u_getQIcon('diskette.png'), 'Сохранить конфигурацию')
+        self.TOOLBAR.actions()[-1].triggered.connect(lambda: self.USER_LOGGER.log('Not implemented yet', 'error'))
+
+        self.TOOLBAR.addAction(self.u_getQIcon('question.png'), 'Помощь')
+        self.TOOLBAR.actions()[-1].triggered.connect(lambda: self.USER_LOGGER.log('Not implemented yet', 'error'))
+
         self.TOOLBAR.addAction(self.u_getQIcon('spellbook_64.png'), 'some function here')
-        self.TOOLBAR.actions()[-1].triggered.connect(lambda: print('yareyare'))
+        self.TOOLBAR.actions()[-1].triggered.connect(lambda: self.USER_LOGGER.log('Not implemented yet', 'error'))
 
         self.addToolBar(self.TOOLBAR)
 
     def _SetCentralWidget(self):
-        # self.SCENE = Scene()
-        # self.ControlViewScene = QGraphicsScene()
-        # self.ControlView = ControlView(self.ControlViewScene)
 
-        # self.ControlView = ControlView(self.ItemsCollection, self.USER_LOGGER.log, lambda x: None)
         self.ControlView = ControlView(self.ItemsCollection, self.USER_LOGGER.log, lambda msg: self.STATUS_BAR.showMessage(msg))
-        # self.ControlView = ControlView(self.ItemsCollection,
-        #                                self.USER_LOGGER.log,
-        #                                lambda msg: self.STATUS_BAR.showMessage(msg),
-        #                                self.PropertyDisplayer.show_property)
 
         self.setCentralWidget(self.ControlView)
 
@@ -106,6 +109,8 @@ class mainWindow(QMainWindow):
         self.BOT_DOCK_AREA.setTitleBarWidget(QWidget(None))
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.BOT_DOCK_AREA)
 
+        # self.splitDockWidget(self.LEFT_DOCK_AREA , self.BOT_DOCK_AREA, Qt.Orientation.Vertical)
+
     def _SetLeftDockArea(self):
         self.LEFT_DOCK_AREA = QDockWidget()
 
@@ -115,7 +120,7 @@ class mainWindow(QMainWindow):
         # lw = QLabel('ITEMS LIBRARY (IMPLEMENT ME!)') #fixme
         # ERA CATALOG
         shield_catalog_wgt = SceneItemsCatalog(column_count=2)
-        catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir, self.PropertyDisplayer.show_property)
+        catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir, self.PropertyDisplayer.show_property_shield)
         # catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir)
         for i in catalog_items:
             shield_catalog_wgt.add_item(i)
@@ -127,7 +132,7 @@ class mainWindow(QMainWindow):
 
         # SHELL CATALOG
         shell_catalog_wgt = SceneItemsCatalog(column_count=1)
-        catalog_items = generate_catalog_shell(self.interactor.paths.abs_img_dir)
+        catalog_items = generate_catalog_shell(self.interactor.paths.abs_img_dir, self.PropertyDisplayer.show_property_shell)
         for i in catalog_items:
             shell_catalog_wgt.add_item(i)
         self.ItemsCollection.add(catalog_items)
@@ -155,6 +160,8 @@ class mainWindow(QMainWindow):
         self.RIGHT_DOCK_AREA.setFloating(True)
         self.RIGHT_DOCK_AREA.setTitleBarWidget(QWidget(None))
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.RIGHT_DOCK_AREA)
+        # self.RIGHT_DOCK_AREA.
+
 
     def _SetStatusBar(self):
         self.STATUS_BAR = QStatusBar()

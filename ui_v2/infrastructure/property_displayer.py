@@ -13,15 +13,26 @@ class PropertyDisplayer(QWidget):
         super().__init__()
 
         self.layout_0 = QVBoxLayout()
-        self.layout_1_shell_props = QVBoxLayout()
+
+        self.layout_1_shell_props = QFormLayout()
+        self.layout_1_shell_props_CONTAINER = QWidget()
+        self.layout_1_shell_props_CONTAINER.setLayout(self.layout_1_shell_props)
+        self.layout_1_shell_props_CONTAINER.setStyleSheet('background-color:darksalmon;')
+
         self.layout_1_shield_props = QFormLayout()
-        self.layout_0.addLayout(self.layout_1_shell_props)
-        self.layout_0.addLayout(self.layout_1_shield_props)
+        self.layout_1_shield_props_CONTAINER = QWidget()
+        self.layout_1_shield_props_CONTAINER.setLayout(self.layout_1_shield_props)
+        self.layout_1_shield_props_CONTAINER.setStyleSheet('background-color:darkseagreen;')
+
+        # self.layout_0.addLayout(self.layout_1_shell_props)
+        self.layout_0.addWidget(self.layout_1_shell_props_CONTAINER)
+        # self.layout_0.addLayout(self.layout_1_shield_props)
+        self.layout_0.addWidget(self.layout_1_shield_props_CONTAINER)
         self.setLayout(self.layout_0)
 
         self.show()
 
-    def show_property(self, properties: list[SceneObjProperty]):
+    def show_property_shield(self, properties: list[SceneObjProperty]):
         """
         :param properties:
         :param type: 'shield' or 'shell'
@@ -31,6 +42,17 @@ class PropertyDisplayer(QWidget):
             self.layout_1_shield_props.removeRow(0)
         for p in properties:
             self.layout_1_shield_props.addRow(QLabel(p.key), p.widget)
+
+    def show_property_shell(self, properties: list[SceneObjProperty]):
+        """
+        :param properties:
+        :param type: 'shield' or 'shell'
+        """
+        # self.props_fields = []
+        for r in range(self.layout_1_shell_props.rowCount()):
+            self.layout_1_shell_props.removeRow(0)
+        for p in properties:
+            self.layout_1_shell_props.addRow(QLabel(p.key), p.widget)
 
 
 if __name__ == "__main__":
