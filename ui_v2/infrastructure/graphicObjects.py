@@ -12,10 +12,10 @@ from ui_v2.infrastructure.helpers import SceneObjProperty
 
 
 def NEW_CustomizableSell(property_displayer: typing.Callable[[dict], None]):
-    return lambda :CustomizableSell(property_displayer)
+    return lambda :CustomizableShell(property_displayer)
 
 
-class CustomizableSell():
+class CustomizableShell():
     """Calculation parameters"""
 
     _jet_material_density: float = 8.96
@@ -112,16 +112,11 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
     # _distance: float = 0
 
     """Drawing parameters"""
-    # _scale_coefficient = 3
-    #
-    # _element_length_2draw: float = _element_length * _scale_coefficient
-    # _element_width_2draw: float = _element_width * _scale_coefficient
-    # _face_plate_thickness_2draw: float = _face_plate_thickness * _scale_coefficient
-    # _rear_plate_thickness_2draw: float = _rear_plate_thickness * _scale_coefficient
-    # _explosive_layer_thickness_2draw: float = _explosive_layer_thickness * _scale_coefficient
-
+    _is_focused: bool = True
+    pen_on_focus: QPen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.DashLine)
+    # brush_on_focus: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense6Pattern)
     position: QPointF = QPointF(0, 0)
-    pen: QPen = QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine)
+    pen: QPen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.SolidLine)
     brush: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense6Pattern)
 
     """Closures to MainWindow"""
@@ -139,6 +134,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         self.line = QLineF(-1,0,1,0)
 
         self.rect = self._get_rect()
+        # self.rect.setFlag
 
     def itemChange(self, change, value):
         if (
@@ -157,6 +153,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self._is_focused = True
         props = self._get_props_dict()
         self.property_displayer(props)
         super().mousePressEvent(event)
@@ -176,9 +173,15 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
         painter.setBrush(self.brush)
-        painter.setPen(self.pen)
+        if self._is_focused:
+            painter.setPen(self.pen_on_focus)
+        else:
+            painter.setPen(self.pen)
         # painter.drawRect(self._get_rect())
         painter.drawRect(self.rect)
+
+    def unfocus(self):
+        self._is_focused = False
 
     def get_half_height(self):
         return self.rect.height()*math.cos(self._tilt_angle)/2

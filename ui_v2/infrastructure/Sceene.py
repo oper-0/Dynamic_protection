@@ -3,13 +3,14 @@ import time
 from typing import Callable
 
 from PyQt6 import QtGui, QtWidgets, QtCore
-from PyQt6.QtCore import Qt, QPoint, QRect, QPointF, QLine, QLineF
+from PyQt6.QtCore import Qt, QPoint, QRect, QPointF, QLine, QLineF, QRectF
 from PyQt6.QtGui import QPainter, QPixmap, QPen, QColor, QImage, QBrush, QTextOption
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGraphicsScene, QGraphicsView, \
-    QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy, QGraphicsTextItem
+    QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy, QGraphicsTextItem, QScrollBar
 
 from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item
 from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene
+from ui_v2.infrastructure.semi_inf_isotropic_element import NEW_SemiInfIsotropicElement
 
 
 class GraphicsScene(QGraphicsScene):
@@ -26,16 +27,28 @@ class GraphicsScene(QGraphicsScene):
     distance_lines_pen = QPen(Qt.GlobalColor.black, 2, Qt.PenStyle.SolidLine)
     distance_vertical_lines_pen = QPen(Qt.GlobalColor.darkRed, 1, Qt.PenStyle.DashLine)
 
+    rect_area: QRectF = QRectF(0, 0, 0, 0)  # FIXME лучше б получать эту арею из вью а не сцены
+
     v_line_delta = 150
 
 
 
     # def __int__(self):
     #     self.setSceneRect(0, 0, self.GraphicsView.width(), self.GraphicsView.height())
+    def get_rect_area(self)->QRectF:
+        return QRectF(
+            self.rect_area.topLeft().x(),
+            self.rect_area.topLeft().y()*1.5,
+            self.rect_area.width()*1.5,
+            self.rect_area.height()*1.5,
+        )
 
     def drawForeground(self, painter, rect):
         super(GraphicsScene, self).drawForeground(painter, rect)
         painter.save()
+
+        # save rect for closure call when drawing semi infinte isoropic item
+        self.rect_area = rect
 
         # DRAW DISTANCE-LINES BETWEEN OBJECTS ON THE SCENE
         self.scene_obj_distance_lines = []
@@ -107,6 +120,10 @@ class GraphicsScene(QGraphicsScene):
         # print(self.cursor_position)
         self.status_bar(f"x:{int(self.cursor_position.x())} y:{int(self.cursor_position.y())}")
 
+    def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        self._unfocus_items()
+        super(GraphicsScene, self).mousePressEvent(event)
+
     def dragMoveEvent(self, event: QtGui.QDragMoveEvent) -> None:
         pass
 
@@ -119,6 +136,7 @@ class GraphicsScene(QGraphicsScene):
 
     # def dropEvent(self, event: QtGui.QDropEvent) -> None:
     def dropEvent(self, event: 'QGraphicsSceneDragDropEvent') -> None:
+        self._unfocus_items()
         name = event.mimeData().text()
         item = self.item_catalog.get_item(name)
         scene_item = item.get_scene_item()
@@ -151,29 +169,55 @@ class GraphicsScene(QGraphicsScene):
             poss.append(QPointF(i.scenePos().x(), i.scenePos().y()+y_delta))
         return poss
 
+    def _unfocus_items(self):
+        for itm in self.items():
+            itm.unfocus()
+
 class ControlView(QGraphicsView):
     cell_size = 80
     grid_pen = QPen(Qt.GlobalColor.lightGray, 1, Qt.PenStyle.DashDotDotLine)
-    axis_pen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.DashDotDotLine)
+    axis_pen = QPen(Qt.GlobalColor.white, 1, Qt.PenStyle.SolidLine)
     axis_pen_x = QPen(Qt.GlobalColor.red, 1, Qt.PenStyle.DashLine)
     _zoom = 0
+
+    _isPanning = False
+    _mousePressed = False
     def __init__(self,
                  item_catalog: ItemsCollectionInterface,
                  logger_fun: Callable[[str,str], None],
                  status_bar: Callable[[str], None]):
         super().__init__()
 
+        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
+
         self.CVScene = GraphicsScene()
         self.CVScene.status_bar = status_bar
         self.CVScene.logger = logger_fun
         self.CVScene.item_catalog = item_catalog
+
+        # Элемент полу-бесконечной брони
+        self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
+            property_displayer = lambda x: print(f'displaying property: {x}'),
+            f_get_scene_rect = self.CVScene.get_rect_area)
+        self.CVScene.addItem(self.semi_inf_isotropic_element())
+
         self.item_catalog = item_catalog
         self.logger = logger_fun
 
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+
+        # self.hScrollBar = QScrollBar()
+        # self.hScrollBar.setGeometry(100, 50,30,200)
+        # self.hScrollBar.setValue(25)
+        # self.setHorizontalScrollBar(self.hScrollBar)
+
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+
         self.setBackgroundBrush(Qt.GlobalColor.lightGray)
         self.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.setObjectName('ControlView')
@@ -184,7 +228,35 @@ class ControlView(QGraphicsView):
         self.dragOver = False
 
     def mousePressEvent(self, event):
-        super(ControlView, self).mousePressEvent(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mousePressed = True
+            if self._isPanning:
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+                self._dragPos = event.pos()
+                event.accept()
+            else:
+                super(ControlView, self).mousePressEvent(event)
+
+        # super(ControlView, self).mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
+        self._mousePressed = False
+        super(ControlView, self).mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Space and not self._mousePressed:
+            self._isPanning = True
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+        else:
+            super(ControlView, self).keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Space:
+            if not self._mousePressed:
+                self._isPanning = False
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+            else:
+                super(ControlView, self).keyReleaseEvent(event)
 
     def drawBackground(self, painter: QtGui.QPainter, rect: QtCore.QRectF) -> None:
         painter.save()
@@ -222,34 +294,22 @@ class ControlView(QGraphicsView):
 
         painter.restore()
 
-    # def wheelEvent(self, event):
-    #     if event.angleDelta().y() > 0:
-    #         factor = 1.25
-    #         self._zoom += 1
-    #     else:
-    #         factor = 0.8
-    #         self._zoom -= 1
-    #     if self._zoom > 0:
-    #         self.scale(factor, factor)
-    #     elif self._zoom == 0:
-    #         # self.fitInView()
-    #         pass
-    #     else:
-    #         self._zoom = 0
-
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         if event.angleDelta().y()>0:
             self.scale(1.1,1.1)
-            # for i in self.items():
-            #     i.scale_object(1.1)
-            #     self.CVScene.update()
-            # self.item1.scale_object(1.1)
         else:
             self.scale(0.9,0.9)
-            # for i in self.items():
-            #     i.scale_object(0.9)
-            #     self.CVScene.update()
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
         self.CVScene.update()
-        super(ControlView, self).mouseMoveEvent(event)
+        if self._mousePressed and self._isPanning:
+            newPos = event.pos()
+            # newPos = event.position()
+            diff = newPos - self._dragPos
+            self._dragPos = newPos
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value()-diff.x())
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value()-diff.y())
+            print(self.verticalScrollBar().value())
+            event.accept()
+        else:
+            super(ControlView, self).mouseMoveEvent(event)

@@ -3,7 +3,7 @@ import os
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QToolBar, QStatusBar, QDockWidget, QWidget, QLabel, QHBoxLayout, QSizePolicy, \
-    QGraphicsScene, QTabWidget
+    QGraphicsScene, QTabWidget, QScrollArea
 
 from playground.dragDrop import DropLabel
 from ui_v2.ArmorItems_library.ERA import generate_catalog_shield, generate_catalog_shell
@@ -91,6 +91,9 @@ class mainWindow(QMainWindow):
 
         self.ControlView = ControlView(self.ItemsCollection, self.USER_LOGGER.log, lambda msg: self.STATUS_BAR.showMessage(msg))
 
+        # self.croll_are = QScrollArea()
+        # self.croll_are.setWidget(self.ControlView)
+        # self.setCentralWidget(self.croll_are)
         self.setCentralWidget(self.ControlView)
 
     def _SetBotDockArea(self):
