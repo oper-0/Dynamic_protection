@@ -1,16 +1,48 @@
-import sys
-import time
+import typing
 from typing import Callable
 
 from PyQt6 import QtGui, QtWidgets, QtCore
-from PyQt6.QtCore import Qt, QPoint, QRect, QPointF, QLine, QLineF, QRectF
-from PyQt6.QtGui import QPainter, QPixmap, QPen, QColor, QImage, QBrush, QTextOption
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QGraphicsScene, QGraphicsView, \
-    QGraphicsPixmapItem, QLabel, QColorDialog, QSizePolicy, QGraphicsTextItem, QScrollBar
+from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
+from PyQt6.QtGui import QPainter, QPen
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsItem
 
-from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item
-from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene
-from ui_v2.infrastructure.semi_inf_isotropic_element import NEW_SemiInfIsotropicElement
+from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene, CatalogItemTypes
+from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface, SceneActorInterface
+from ui_v2.infrastructure.scene_actors.semi_inf_isotropic_element import NEW_SemiInfIsotropicElement
+
+
+class ObjectKeeper:
+    """keeps and maintain consistency of the scene actors"""
+    _objs: list[ActorInterface] = []
+    addItem_callback: typing.Callable[[QGraphicsItem], None]
+
+    def __init__(self, addItem_callback: typing.Callable[[QGraphicsItem], None]):
+        self.addItem_callback = addItem_callback
+
+    def add_obj(self, obj: ActorInterface):
+        """
+        adds obj to the container, if CONST_ITEM_TYPE property of obj equals to CatalogItemTypes.shell -> pops (if
+        exist) previous then adds current obj
+        :param obj:
+        """
+        if obj.CONST_ITEM_TYPE == CatalogItemTypes.shell:  # объекты снарядов должны быть единственными
+            # delete all shell objects among actors
+            self._objs = [o for o in self._objs if o.CONST_ITEM_TYPE != CatalogItemTypes.shell]
+
+        self._objs.append(obj)  # adding to container
+        # adding to scene if it's not shell.
+        if obj.CONST_ITEM_TYPE != CatalogItemTypes.shell:
+            self.addItem_callback(obj)  # adding to scene
+
+    def get_shell_obj(self):
+        for i in self._objs:
+            if i.CONST_ITEM_TYPE == CatalogItemTypes.shell:
+                return i
+
+    def get_obstacle_obj(self):
+        for i in self._objs:
+            if i.CONST_ITEM_TYPE == CatalogItemTypes.obstacle:
+                return i
 
 
 class GraphicsScene(QGraphicsScene):
@@ -31,17 +63,24 @@ class GraphicsScene(QGraphicsScene):
 
     v_line_delta = 150
 
+    object_keeper: ObjectKeeper  # контейнер для объектов: защитные элементы, полу-бесконечная преграда и снаряд
 
+    def __init__(self):
+        """ wraps self.addItems() method to maintain consistency according scene logic. Means wherever you want to
+        use self.addItem() instead use self.objectKeeper.add_obj() """
+        super(GraphicsScene, self).__init__()
+        self.object_keeper = ObjectKeeper(lambda x: self.addItem(x))
 
-    # def __int__(self):
-    #     self.setSceneRect(0, 0, self.GraphicsView.width(), self.GraphicsView.height())
-    def get_rect_area(self)->QRectF:
+    def get_rect_area(self) -> QRectF:
         return QRectF(
             self.rect_area.topLeft().x(),
             self.rect_area.topLeft().y()*1.5,
             self.rect_area.width()*1.5,
             self.rect_area.height()*1.5,
         )
+
+    # def addItem(self, item: QGraphicsItem) -> None:
+    #     self.object_keeper.add_obj(item)
 
     def drawForeground(self, painter, rect):
         super(GraphicsScene, self).drawForeground(painter, rect)
@@ -124,6 +163,11 @@ class GraphicsScene(QGraphicsScene):
         self._unfocus_items()
         super(GraphicsScene, self).mousePressEvent(event)
 
+    def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+        # MAKE HOLE IN SEMI_INF_OBSTACLE
+        self.calculate()
+        super(GraphicsScene, self).mouseReleaseEvent(event)
+
     def dragMoveEvent(self, event: QtGui.QDragMoveEvent) -> None:
         pass
 
@@ -145,7 +189,7 @@ class GraphicsScene(QGraphicsScene):
         if hasattr(scene_item, 'get_half_height') and callable(scene_item.get_half_height):
             # item_pos = QPointF(event.scenePos().x(), 0-scene_item.get_half_height())
             item_pos = QPointF(event.scenePos().x(), 0)
-            self.logger(f"item dropped on {item_pos}", 'info')
+            self.logger(f"item dropped on [{item_pos.x()}; {item_pos.y()}]", 'info')
 
         if not item:
             self.logger(f"Отсутствует соответствие названия в каталоге для {name}", 'error')
@@ -153,11 +197,15 @@ class GraphicsScene(QGraphicsScene):
             return
 
         # 💩 magic code, do not touch:
+        # если дропаемый объект это shell:
         if hasattr(scene_item, 'set_props') and callable(scene_item.set_props):
+            # TODO: надо удалять предыдущий шел
             scene_item.set_props()
+            self.object_keeper.add_obj(scene_item)
         else:
             scene_item.set_position(item_pos)
-            self.addItem(scene_item)
+            # self.addItem(scene_item)
+            self.object_keeper.add_obj(scene_item)
 
         event.acceptProposedAction()
 
@@ -170,8 +218,42 @@ class GraphicsScene(QGraphicsScene):
         return poss
 
     def _unfocus_items(self):
+        itm: SceneActorInterface
         for itm in self.items():
             itm.unfocus()
+
+    def wrapper_make_hole(self, radius, depth) -> bool:
+        obstacle = self.object_keeper.get_obstacle_obj()
+        if not obstacle:
+            return False
+        if hasattr(obstacle, 'make_hole') and callable(obstacle.make_hole):
+            obstacle.make_hole(radius, depth)
+            return True
+        raise AttributeError('Объект полу-бесконечного препятствия должен иметь метод make_hole()')
+
+    def get_shell_item(self):
+        for itm in self.items():
+            if not hasattr(itm, 'CONST_ITEM_TYPE') :
+                raise AttributeError('Все объекты сцены должны иметь свойство CONST_ITEM_TYPE со значением из CatalogItemTypes')
+            if itm.CONST_ITEM_TYPE == CatalogItemTypes.shell:
+                return itm #???????
+        return None
+
+    def calculate(self):
+
+        # make calculs here TODO
+
+        if not self.wrapper_make_hole(30, 300):  # calculs result displaying
+            self.logger('Невозможно произвести расчёт', 'error')
+        tmp = self.object_keeper.get_shell_obj()
+        if not self.object_keeper.get_shell_obj():
+            self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
+        # if not self.get_shell_item():
+        #     self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
+
+
+        self.update()
+
 
 class ControlView(QGraphicsView):
     cell_size = 80
@@ -200,7 +282,8 @@ class ControlView(QGraphicsView):
         self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
             property_displayer = lambda x: print(f'displaying property: {x}'),
             f_get_scene_rect = self.CVScene.get_rect_area)
-        self.CVScene.addItem(self.semi_inf_isotropic_element())
+        # self.CVScene.addItem(self.semi_inf_isotropic_element())
+        self.CVScene.object_keeper.add_obj(self.semi_inf_isotropic_element())  # <-wrapper about addItem()
 
         self.item_catalog = item_catalog
         self.logger = logger_fun

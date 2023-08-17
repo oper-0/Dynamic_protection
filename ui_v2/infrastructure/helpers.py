@@ -1,6 +1,7 @@
 import copy
 from collections import namedtuple
 from dataclasses import dataclass
+from enum import Enum
 from typing import Protocol
 from functools import singledispatchmethod
 
@@ -8,6 +9,11 @@ from PyQt6.QtCore import QPointF
 
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 
+
+class CatalogItemTypes(Enum):
+    armor = 'armor'
+    shell = 'shell'
+    obstacle = 'obstacle'
 
 @dataclass
 class TextOnScene:

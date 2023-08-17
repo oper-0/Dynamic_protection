@@ -1,12 +1,11 @@
 import os.path
 from typing import Callable
 
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent
+from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 
-from ui_v2.infrastructure.SceneObjects import SceneItemWidget, SceneItemWidgetSHELL
-from ui_v2.infrastructure.graphicObjects import DynamicProtectionElement, test_item, ExplosiveReactiveArmourPlate, \
-    NEW_ExplosiveReactiveArmourPlate, NEW_CustomizableSell
-
+from ui_v2.infrastructure.scene_actors.DynamicProtectionElement import test_item, DynamicProtectionElement
+from ui_v2.infrastructure.scene_actors.ExplosiveReactiveArmorPlate import NEW_ExplosiveReactiveArmourPlate
+from ui_v2.infrastructure.scene_actors.CustomizableShell import NEW_CustomizableSell
 
 class ERA_KONTAKT_1_SQ(SceneItemWidget):
     """

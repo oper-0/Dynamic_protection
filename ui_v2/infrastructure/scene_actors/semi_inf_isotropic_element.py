@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial,
     QLineEdit
 
 from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, LabelAndSpin, DoubleSpinBoxMod1
-from ui_v2.infrastructure.helpers import SceneObjProperty
+from ui_v2.infrastructure.helpers import SceneObjProperty, CatalogItemTypes
+from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface
 
 
 def NEW_SemiInfIsotropicElement(property_displayer: typing.Callable[[dict], None],
@@ -35,6 +36,9 @@ class SemiInfIsotropicElement(QGraphicsItem):
     # hole_radius: float = 50
     hole_points: list[QPointF] = []
 
+    # общее свойство для всех объектов сцены
+    CONST_ITEM_TYPE = CatalogItemTypes.obstacle
+
     def __init__(self,
                  property_displayer: typing.Callable[[dict], None],
                  f_get_scene_rect: typing.Callable[[None], QRectF]):
@@ -46,7 +50,6 @@ class SemiInfIsotropicElement(QGraphicsItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
 
-        self.make_hole(30, 200) #FIXME
 
         # self.line = QLineF(-1,0,1,0)
 
@@ -108,7 +111,7 @@ class SemiInfIsotropicElement(QGraphicsItem):
     #     # return self.pos()
 
     def make_hole(self, radius, depth):  # [(x0,y0),(x1,y1),(x2,y2),(x3,y3),(x4,y4),(x5,y5),..]
-        step = 10
+        step = int(.05*depth)
         max_deviation = radius * 0.1
 
         points_head = []
