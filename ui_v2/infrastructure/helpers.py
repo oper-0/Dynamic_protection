@@ -10,6 +10,25 @@ from PyQt6.QtCore import QPointF
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 
 
+class SemiInfIsotropicElementMaterials(str, Enum):
+    Steel = 'Сталь'
+
+
+class CumulativeLiningMaterials(str, Enum):
+    Steel = 'Сталь'
+    Copper = 'Медь'
+    Duralumin = 'Дюраль'
+
+
+def some_coefficient(material: CumulativeLiningMaterials) -> float:
+    match material:
+        case CumulativeLiningMaterials.Steel:
+            return 7.9
+        case CumulativeLiningMaterials.Copper:
+            return 7.1
+        case CumulativeLiningMaterials.Duralumin:
+            return 7.35
+
 class CatalogItemTypes(Enum):
     armor = 'armor'
     shell = 'shell'

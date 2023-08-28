@@ -89,7 +89,14 @@ class mainWindow(QMainWindow):
 
     def _SetCentralWidget(self):
 
-        self.ControlView = ControlView(self.ItemsCollection, self.USER_LOGGER.log, lambda msg: self.STATUS_BAR.showMessage(msg))
+        self.ControlView = ControlView( item_catalog=self.ItemsCollection,
+                                        logger_fun=self.USER_LOGGER.log,
+                                        status_bar=lambda msg: self.STATUS_BAR.showMessage(msg),
+                                        SemiInfIsotropicElement_property_displayer_fun=self.PropertyDisplayer.show_property_shield)
+
+        # item_catalog: ItemsCollectionInterface,
+        # logger_fun: Callable[[str, str], None],
+        # status_bar:
 
         # self.croll_are = QScrollArea()
         # self.croll_are.setWidget(self.ControlView)

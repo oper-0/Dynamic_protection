@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QPainter, QPen
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QGraphicsItem
 
+from ui_v2.infrastructure.dz_calculation.semi_inf_obstacle import calculation_semi_inf_obst
 from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene, CatalogItemTypes
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface, SceneActorInterface
 from ui_v2.infrastructure.scene_actors.semi_inf_isotropic_element import NEW_SemiInfIsotropicElement
@@ -189,7 +190,7 @@ class GraphicsScene(QGraphicsScene):
         if hasattr(scene_item, 'get_half_height') and callable(scene_item.get_half_height):
             # item_pos = QPointF(event.scenePos().x(), 0-scene_item.get_half_height())
             item_pos = QPointF(event.scenePos().x(), 0)
-            self.logger(f"item dropped on [{item_pos.x()}; {item_pos.y()}]", 'info')
+            self.logger(f"item dropped on [{int(item_pos.x())}; {int(item_pos.y())}]", 'info')
 
         if not item:
             self.logger(f"Отсутствует соответствие названия в каталоге для {name}", 'error')
@@ -201,6 +202,7 @@ class GraphicsScene(QGraphicsScene):
         if hasattr(scene_item, 'set_props') and callable(scene_item.set_props):
             # TODO: надо удалять предыдущий шел
             scene_item.set_props()
+            scene_item.closure_updater_f = lambda : self.calculate()  # 💩💩💩
             self.object_keeper.add_obj(scene_item)
         else:
             scene_item.set_position(item_pos)
@@ -241,16 +243,17 @@ class GraphicsScene(QGraphicsScene):
 
     def calculate(self):
 
-        # make calculs here TODO
-
-        if not self.wrapper_make_hole(30, 300):  # calculs result displaying
-            self.logger('Невозможно произвести расчёт', 'error')
-        tmp = self.object_keeper.get_shell_obj()
         if not self.object_keeper.get_shell_obj():
             self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
-        # if not self.get_shell_item():
-        #     self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
+            return
 
+        diameter, depth = calculation_semi_inf_obst(self.object_keeper.get_shell_obj(),
+                                  self.object_keeper.get_obstacle_obj())
+
+        print(diameter, depth)
+
+        if not self.wrapper_make_hole(diameter/2, depth):  # calculs result displaying
+            self.logger('Невозможно произвести расчёт', 'error')
 
         self.update()
 
@@ -267,11 +270,14 @@ class ControlView(QGraphicsView):
     def __init__(self,
                  item_catalog: ItemsCollectionInterface,
                  logger_fun: Callable[[str,str], None],
-                 status_bar: Callable[[str], None]):
+                 status_bar: Callable[[str], None],
+                 SemiInfIsotropicElement_property_displayer_fun: typing.Callable[[dict], None]):
         super().__init__()
 
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        # self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
+        self.viewport().setMouseTracking(True)
 
         self.CVScene = GraphicsScene()
         self.CVScene.status_bar = status_bar
@@ -280,7 +286,8 @@ class ControlView(QGraphicsView):
 
         # Элемент полу-бесконечной брони
         self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
-            property_displayer = lambda x: print(f'displaying property: {x}'),
+            # property_displayer = lambda x: print(f'displaying property: {x}'),
+            property_displayer = SemiInfIsotropicElement_property_displayer_fun,
             f_get_scene_rect = self.CVScene.get_rect_area)
         # self.CVScene.addItem(self.semi_inf_isotropic_element())
         self.CVScene.object_keeper.add_obj(self.semi_inf_isotropic_element())  # <-wrapper about addItem()
@@ -311,14 +318,15 @@ class ControlView(QGraphicsView):
         self.dragOver = False
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._mousePressed = True
-            if self._isPanning:
-                self.setCursor(Qt.CursorShape.ClosedHandCursor)
-                self._dragPos = event.pos()
-                event.accept()
-            else:
-                super(ControlView, self).mousePressEvent(event)
+        super(ControlView, self).mousePressEvent(event)
+        # if event.button() == Qt.MouseButton.LeftButton:
+        #     self._mousePressed = True
+        #     if self._isPanning:
+        #         self.setCursor(Qt.CursorShape.ClosedHandCursor)
+        #         self._dragPos = event.pos()
+        #         event.accept()
+        #     else:
+        #         super(ControlView, self).mousePressEvent(event)
 
         # super(ControlView, self).mousePressEvent(event)
 
@@ -357,6 +365,7 @@ class ControlView(QGraphicsView):
             y_pos+=self.cell_size
 
         # draw x lines
+
         x_pos = 0
         while x_pos>rect.left():
             painter.drawLine(QPointF(x_pos, rect.bottom()),
