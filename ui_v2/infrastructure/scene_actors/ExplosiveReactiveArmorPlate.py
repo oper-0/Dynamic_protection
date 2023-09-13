@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QGraphicsItem, QWidget, QLineEdit
 
 from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, DoubleSpinBoxMod1
 from ui_v2.infrastructure.helpers import SceneObjProperty, CatalogItemTypes
+from ui_v2.infrastructure.scene_actors.Jet import Jet
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface
 
 
@@ -131,6 +132,11 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
             QPointF(self.position.x() + self._explosive_layer_thickness / 2 - self._rear_plate_thickness,
                     self.position.y() + self._element_length / 2))
 
+    """Calculator. Общий метод для всех объектов брони на сцене"""
+    def calc_jet_impact(self, jet: Jet) -> Jet:
+        if hasattr(jet, "cursor_position"):
+            jet.length.value *= 0.5   # FIXME temp solution
+        return jet
 
     def _get_props_dict(self) -> list[SceneObjProperty]:
 

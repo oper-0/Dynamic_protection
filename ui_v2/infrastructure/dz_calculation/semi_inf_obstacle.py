@@ -109,6 +109,7 @@ def calculation_semi_inf_obst(shell: CustomizableShell, obst: SemiInfIsotropicEl
         'hole_diameter':[],
     })
 
+
     # for idx, row in calc_df_1.iterrows():
     for idx in range(len(calc_df_1.index)):
         if idx == 0:  # its 1st section

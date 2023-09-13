@@ -29,10 +29,12 @@ def some_coefficient(material: CumulativeLiningMaterials) -> float:
         case CumulativeLiningMaterials.Duralumin:
             return 7.35
 
+
 class CatalogItemTypes(Enum):
     armor = 'armor'
     shell = 'shell'
     obstacle = 'obstacle'
+
 
 @dataclass
 class TextOnScene:
@@ -41,9 +43,27 @@ class TextOnScene:
 
 
 @dataclass
+class CalcParameter:
+    name: str
+    value: any
+    unit: str
+    description: str
+
+    def __init__(self, name='unknown',
+                 value='unknown',
+                 unit='unknown',
+                 description='unknown'):
+        self.name = name
+        self.value = value
+        self.unit = unit
+        self.description = description
+
+
+@dataclass
 class SceneObjProperty:
     key: str
     widget: any
+
 
 class ItemsCollectionInterface(Protocol):
 
@@ -55,7 +75,6 @@ class ItemsCollectionInterface(Protocol):
 
 
 class ItemsCollection:
-
     data: list[SceneItemWidget] = []
 
     def __int__(self):
@@ -81,4 +100,3 @@ class ItemsCollection:
     @add.register
     def _(self, obj: object):
         self.data.append(obj)
-

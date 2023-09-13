@@ -1,6 +1,7 @@
 import os.path
 import sys
 
+from PyQt6 import QtCore
 from PyQt6.QtWidgets import QApplication
 
 from ui_v2.Windows.mainWindow import mainWindow
@@ -16,5 +17,11 @@ pk.abs_img_dir = os.path.join(pk.abs_root_dir, 'ui_v2', 'assets', 'img')
 interactor.paths = pk
 
 app = QApplication(sys.argv)
+# ----------------------------------------------------------------
+file = QtCore.QFile("style.qss")
+file.open(QtCore.QFile.OpenModeFlag.ReadOnly | QtCore.QFile.OpenModeFlag.Text)
+stream = QtCore.QTextStream(file)
+app.setStyleSheet(stream.readAll())
+# ----------------------------------------------------------------
 w = mainWindow(interactor)
 sys.exit(app.exec())

@@ -6,6 +6,8 @@ from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 from ui_v2.infrastructure.scene_actors.DynamicProtectionElement import test_item, DynamicProtectionElement
 from ui_v2.infrastructure.scene_actors.ExplosiveReactiveArmorPlate import NEW_ExplosiveReactiveArmourPlate
 from ui_v2.infrastructure.scene_actors.CustomizableShell import NEW_CustomizableSell
+from ui_v2.infrastructure.scene_actors.JetShell import NEW_JetShell
+
 
 class ERA_KONTAKT_1_SQ(SceneItemWidget):
     """
@@ -66,6 +68,18 @@ class STEEL_SHEET(SceneItemWidget):
                          img_path=os.path.join(img_dir_path, 'steel_sheet.png'))
 
 
+class SHELL_JET(SceneItemWidget):
+    """
+    Кумулятивная струя
+    """
+    def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
+        super().__init__(title='Кумулятивная струя',
+                         description='Кумулятивная струя',
+                         img_path=os.path.join(img_dir_path, 'JET.png'),
+                         column_count=1,
+                         actor=NEW_JetShell(property_displayer))
+
+
 class SHELL_CUSTOMIZABLE(SceneItemWidget):
     """
     ПГ-7В
@@ -115,6 +129,7 @@ def generate_catalog_shield(img_dir_path: str, property_displayer: Callable[[dic
 
 def generate_catalog_shell(img_dir_path: str, property_displayer: Callable[[dict], None]) -> list[SceneItemWidget]:
     item_list = [
+        SHELL_JET(img_dir_path, property_displayer),
         SHELL_CUSTOMIZABLE(img_dir_path, property_displayer),
         SHELL_PG_7V(img_dir_path, property_displayer),
         SHELL_KORNET(img_dir_path, property_displayer)

@@ -10,27 +10,28 @@ from PyQt6.QtWidgets import QGraphicsItem, QWidget, QCheckBox, QDateEdit, QDial,
 
 from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, LabelAndSpin, DoubleSpinBoxMod1
 from ui_v2.infrastructure.helpers import SceneObjProperty, CatalogItemTypes, SemiInfIsotropicElementMaterials
+from ui_v2.infrastructure.scene_actors.Jet import Jet
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface
 
 
-def NEW_SemiInfIsotropicElement(property_displayer: typing.Callable[[dict], None],
+def NEW_SemiInfIsotropicElementSimplified(property_displayer: typing.Callable[[dict], None],
                                 f_get_scene_rect: typing.Callable[[None], QRectF]):
-    return lambda: SemiInfIsotropicElement(property_displayer, f_get_scene_rect)
+    return lambda: SemiInfIsotropicElementSimplified(property_displayer, f_get_scene_rect)
     # return ExplosiveReactiveArmourPlate(property_displayer) # fixme раньше ретунил класс, но тпеерь инстанс -> сингл.
 
 
-class SemiInfIsotropicElement(QGraphicsItem):
+class SemiInfIsotropicElementSimplified(QGraphicsItem):
     """Calculation parameters"""
     _material = SemiInfIsotropicElementMaterials.Steel
 
     """Drawing parameters"""
     _is_focused: bool = True
     pen_on_focus: QPen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.DashLine)
-    brush_on_focus: QBrush = QBrush(Qt.GlobalColor.blue, Qt.BrushStyle.Dense3Pattern)
+    brush_on_focus: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense3Pattern)
     # brush_on_focus: QBrush = QBrush(Qt.GlobalColor.green, Qt.BrushStyle.Dense6Pattern)
     # position: QPointF = QPointF(0, 0)
     pen: QPen = QPen(Qt.GlobalColor.black, 1, Qt.PenStyle.SolidLine)
-    brush: QBrush = QBrush(Qt.GlobalColor.darkBlue, Qt.BrushStyle.Dense3Pattern)
+    brush: QBrush = QBrush(Qt.GlobalColor.darkGreen, Qt.BrushStyle.Dense3Pattern)
 
     """Closures to MainWindow"""
     # Функция виджета основного окна для отображения свойств элемента. {key: value, ...}
@@ -54,36 +55,11 @@ class SemiInfIsotropicElement(QGraphicsItem):
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
 
-
-        # self.line = QLineF(-1,0,1,0)
-
-        # self.rect = self._get_rect()
-        # self.polygon = self._get_polygon()
-
-    # def itemChange(self, change, value):
-    #     if (
-    #             change == QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionChange
-    #             and self.isSelected()
-    #             and not self.line.isNull()
-    #     ):
-    #         p1 = self.line.p1()
-    #         p2 = self.line.p2()
-    #         e1 = p2 - p1
-    #         e2 = value - p1
-    #         dp = QPointF.dotProduct(e1, e2)
-    #         l = QPointF.dotProduct(e1, e1)
-    #         p = p1 + dp * e1 / l
-    #         return p
-    #     return super().itemChange(change, value)
-
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self._is_focused = True
         props = self._get_props_dict()
         self.property_displayer(props)
         super().mousePressEvent(event)
-
-    # def mouseMoveEvent(self, event):
-    #     super().mouseMoveEvent(event)
 
     def boundingRect(self):
         rect = self.f_get_scene_rect()
@@ -91,11 +67,6 @@ class SemiInfIsotropicElement(QGraphicsItem):
             QPointF(0, rect.topLeft().y()),
             QPointF(rect.bottomRight())
         )
-        # return QRectF(
-        #     QPointF(0, 40),
-        #     QPointF(rect.bottomRight())
-        # )
-
     def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
         # painter.setBrush(self.brush)
         if self._is_focused:
@@ -109,18 +80,8 @@ class SemiInfIsotropicElement(QGraphicsItem):
     def unfocus(self):
         self._is_focused = False
 
-    # def get_half_height(self):
-    #     return self.rect.height()*math.cos(self._tilt_angle)/2
-
-    # def get_center(self) -> QPointF:
-    #     return QPointF(self.scenePos().x(), 0)
-    #     # return self.scenePos()
-    #     # return self.pos()
-
     def make_hole(self, radius, depth):  # [(x0,y0),(x1,y1),(x2,y2),(x3,y3),(x4,y4),(x5,y5),..]
         step = int(.05*depth)
-        # if step == 0:  # hole diameter infinitesimally small
-        #     step = 0.01
         max_deviation = radius * 0.1
 
         points_head = []
@@ -129,21 +90,12 @@ class SemiInfIsotropicElement(QGraphicsItem):
 
         points_tale = []
         for x in reversed(points_head):
-            # points_tale.append(QPointF(x.x(), x.y()*-1))
             points_tale.append(QPointF(x.x(), max_deviation * 0.1 * (radius + random.randint(0, 10) - 5)*-1))
 
         self.hole_points = points_head+points_tale
 
     def _get_polygon(self):
         rect = self.f_get_scene_rect()
-
-        # polygon = QPolygonF([
-        #     QPointF(0, rect.topLeft().y()),
-        #     QPointF(rect.topRight()),
-        #     QPointF(rect.bottomRight()),
-        #     QPointF(0, rect.bottomLeft().y()),
-        #     *self.hole_points
-        # ])
         height = 400
         polygon = QPolygonF([
             QPointF(0, height),
@@ -163,7 +115,6 @@ class SemiInfIsotropicElement(QGraphicsItem):
 
         result = [
             SceneObjProperty(key='Материал преграды', widget=wgt_material)
-            # SceneObjProperty(key='Some vale', widget=QLineEdit('some content')),
         ]
 
         return result
@@ -171,3 +122,12 @@ class SemiInfIsotropicElement(QGraphicsItem):
     """PROPERTIES"""
     def set_material(self, value):
         self._material = value
+
+    """CALCULATE"""
+    def calculate_hole(self, jet_obj: Jet) -> tuple[float, float]:
+        """
+        :param jet_obj:
+        :return: (hole_diameter, hole_depth)
+        """
+        return 60, jet_obj.length.value  # FIXME: tmp solution
+

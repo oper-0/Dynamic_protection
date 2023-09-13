@@ -10,6 +10,8 @@ from ui_v2.infrastructure.dz_calculation.semi_inf_obstacle import calculation_se
 from ui_v2.infrastructure.helpers import ItemsCollectionInterface, TextOnScene, CatalogItemTypes
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface, SceneActorInterface
 from ui_v2.infrastructure.scene_actors.semi_inf_isotropic_element import NEW_SemiInfIsotropicElement
+from ui_v2.infrastructure.scene_actors.semi_inf_isotropic_element_simplifyed import \
+    NEW_SemiInfIsotropicElementSimplified
 
 
 class ObjectKeeper:
@@ -41,9 +43,25 @@ class ObjectKeeper:
                 return i
 
     def get_obstacle_obj(self):
+        """
+        :return: Объект последнего препятствия - на чем образуется каверна
+        """
         for i in self._objs:
             if i.CONST_ITEM_TYPE == CatalogItemTypes.obstacle:
                 return i
+
+    def get_all_obstacles(self) -> list:
+        """
+        :return: Отсортированные объекты препятствий сцены, начиная с ближних к летящей КС
+        """
+        result_arr = []
+        for i in self._objs:
+            if i.CONST_ITEM_TYPE == CatalogItemTypes.armor:
+                result_arr.append(i)
+
+        result_arr.sort(key=lambda o: o.scenePos().x())  # Sorting elements
+
+        return result_arr
 
 
 class GraphicsScene(QGraphicsScene):
@@ -225,6 +243,11 @@ class GraphicsScene(QGraphicsScene):
             itm.unfocus()
 
     def wrapper_make_hole(self, radius, depth) -> bool:
+        """
+        :param radius: радиус каверны в мм
+        :param depth: глубина каверны в мм
+        :return:
+        """
         obstacle = self.object_keeper.get_obstacle_obj()
         if not obstacle:
             return False
@@ -247,12 +270,19 @@ class GraphicsScene(QGraphicsScene):
             self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
             return
 
-        diameter, depth = calculation_semi_inf_obst(self.object_keeper.get_shell_obj(),
-                                  self.object_keeper.get_obstacle_obj())
+        armor_objs = self.object_keeper.get_all_obstacles()
+        init_shell = self.object_keeper.get_shell_obj()
 
-        print(diameter, depth)
+        for o in armor_objs:
+            init_shell = o.calc_jet_impact(init_shell)
 
-        if not self.wrapper_make_hole(diameter/2, depth):  # calculs result displaying
+        diameter, depth = self.object_keeper.get_obstacle_obj().calculate_hole(init_shell)
+
+
+        # diameter, depth = calculation_semi_inf_obst(self.object_keeper.get_shell_obj(),
+        #                           self.object_keeper.get_obstacle_obj())
+
+        if not self.wrapper_make_hole(diameter/2, depth*1000):  # calculs result displaying
             self.logger('Невозможно произвести расчёт', 'error')
 
         self.update()
@@ -274,10 +304,16 @@ class ControlView(QGraphicsView):
                  SemiInfIsotropicElement_property_displayer_fun: typing.Callable[[dict], None]):
         super().__init__()
 
-        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        # self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
-        self.viewport().setMouseTracking(True)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        # self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        # self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
+        # self.viewport().setMouseTracking(True)
+        self.change_pos_mouse_button = Qt.MouseButton.MiddleButton
+        self.change_pos_mouse_button_pressed = False
+        self.last_mouse_pos = None
+        self.start_scene_rect = self.sceneRect()
 
         self.CVScene = GraphicsScene()
         self.CVScene.status_bar = status_bar
@@ -285,69 +321,60 @@ class ControlView(QGraphicsView):
         self.CVScene.item_catalog = item_catalog
 
         # Элемент полу-бесконечной брони
-        self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
-            # property_displayer = lambda x: print(f'displaying property: {x}'),
-            property_displayer = SemiInfIsotropicElement_property_displayer_fun,
-            f_get_scene_rect = self.CVScene.get_rect_area)
-        # self.CVScene.addItem(self.semi_inf_isotropic_element())
+        # self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
+        #     property_displayer = SemiInfIsotropicElement_property_displayer_fun,
+        #     f_get_scene_rect = self.CVScene.get_rect_area)
+        self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElementSimplified(
+            property_displayer=SemiInfIsotropicElement_property_displayer_fun,
+            f_get_scene_rect=self.CVScene.get_rect_area)
         self.CVScene.object_keeper.add_obj(self.semi_inf_isotropic_element())  # <-wrapper about addItem()
 
         self.item_catalog = item_catalog
         self.logger = logger_fun
 
-        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        # self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        # self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
-
-        # self.hScrollBar = QScrollBar()
-        # self.hScrollBar.setGeometry(100, 50,30,200)
-        # self.hScrollBar.setValue(25)
-        # self.setHorizontalScrollBar(self.hScrollBar)
-
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
 
         self.setBackgroundBrush(Qt.GlobalColor.lightGray)
         self.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
         self.setObjectName('ControlView')
         self.setScene(self.CVScene)
-        self.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
+        # self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
         self.setAcceptDrops(True)
         self.dragOver = False
 
     def mousePressEvent(self, event):
-        super(ControlView, self).mousePressEvent(event)
-        # if event.button() == Qt.MouseButton.LeftButton:
-        #     self._mousePressed = True
-        #     if self._isPanning:
-        #         self.setCursor(Qt.CursorShape.ClosedHandCursor)
-        #         self._dragPos = event.pos()
-        #         event.accept()
-        #     else:
-        #         super(ControlView, self).mousePressEvent(event)
+        # self.CVScene.update()
+        if event.button() == self.change_pos_mouse_button:
+            self.change_pos_mouse_button_pressed = True
+            self.last_mouse_pos = event.pos()
 
-        # super(ControlView, self).mousePressEvent(event)
+        super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
-        self._mousePressed = False
-        super(ControlView, self).mouseReleaseEvent(event)
+        # self.CVScene.update()
+        if event.button() == self.change_pos_mouse_button:
+            self.change_pos_mouse_button_pressed =False
 
-    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
-        if event.key() == Qt.Key.Key_Space and not self._mousePressed:
-            self._isPanning = True
-            self.setCursor(Qt.CursorShape.OpenHandCursor)
-        else:
-            super(ControlView, self).keyPressEvent(event)
+        super().mouseReleaseEvent(event)
 
-    def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
-        if event.key() == Qt.Key.Key_Space:
-            if not self._mousePressed:
-                self._isPanning = False
-                self.setCursor(Qt.CursorShape.ArrowCursor)
-            else:
-                super(ControlView, self).keyReleaseEvent(event)
+    def mouseMoveEvent(self, event) -> None:
+        # self.CVScene.drawForeground()
+        # self.CVScene.drawForeground(QPainter(), self.sceneRect())
+        if self.change_pos_mouse_button_pressed:
+            delta = event.pos() - self.last_mouse_pos
+            self.last_mouse_pos = event.pos()
+
+            # Изменяем размер сцены на основе направления движения мыши
+            new_scene_rect = self.sceneRect().translated(-delta.x(), -delta.y())
+            self.setSceneRect(new_scene_rect)
+
+        super().mouseMoveEvent(event)
 
     def drawBackground(self, painter: QtGui.QPainter, rect: QtCore.QRectF) -> None:
         painter.save()
@@ -383,7 +410,6 @@ class ControlView(QGraphicsView):
         painter.setPen(self.axis_pen)
         painter.drawLine(QPointF(0, rect.bottom()),QPointF(0, rect.top()))
 
-
         painter.restore()
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
@@ -391,17 +417,3 @@ class ControlView(QGraphicsView):
             self.scale(1.1,1.1)
         else:
             self.scale(0.9,0.9)
-
-    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        self.CVScene.update()
-        if self._mousePressed and self._isPanning:
-            newPos = event.pos()
-            # newPos = event.position()
-            diff = newPos - self._dragPos
-            self._dragPos = newPos
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value()-diff.x())
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value()-diff.y())
-            print(self.verticalScrollBar().value())
-            event.accept()
-        else:
-            super(ControlView, self).mouseMoveEvent(event)

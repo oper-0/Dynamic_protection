@@ -1,0 +1,4 @@
+QWidget:item:hover {
+    background-color: #3daee9;
+    color: #eff0f1;
+}
