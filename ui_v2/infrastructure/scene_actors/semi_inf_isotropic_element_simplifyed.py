@@ -82,6 +82,10 @@ class SemiInfIsotropicElementSimplified(QGraphicsItem):
 
     def make_hole(self, radius, depth):  # [(x0,y0),(x1,y1),(x2,y2),(x3,y3),(x4,y4),(x5,y5),..]
         step = int(.05*depth)
+        if step == 0:
+            self.hole_points = []
+            return
+
         max_deviation = radius * 0.1
 
         points_head = []

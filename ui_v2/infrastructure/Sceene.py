@@ -1,3 +1,4 @@
+import copy
 import typing
 from typing import Callable
 
@@ -19,8 +20,11 @@ class ObjectKeeper:
     _objs: list[ActorInterface] = []
     addItem_callback: typing.Callable[[QGraphicsItem], None]
 
-    def __init__(self, addItem_callback: typing.Callable[[QGraphicsItem], None]):
+    def __init__(self,
+                 addItem_callback: typing.Callable[[QGraphicsItem], None],
+                 deleteItem_callback: typing.Callable[[QGraphicsItem], None]):
         self.addItem_callback = addItem_callback
+        self.deleteItem_callback = deleteItem_callback
 
     def add_obj(self, obj: ActorInterface):
         """
@@ -36,6 +40,13 @@ class ObjectKeeper:
         # adding to scene if it's not shell.
         if obj.CONST_ITEM_TYPE != CatalogItemTypes.shell:
             self.addItem_callback(obj)  # adding to scene
+
+        if obj.CONST_ITEM_TYPE == CatalogItemTypes.armor:
+            # armor object must have set_deleter() function to delete an object from scene
+            obj.set_deleter(self.deleteItem_callback) # FIXME
+
+    def del_obj(self):
+        ...
 
     def get_shell_obj(self):
         for i in self._objs:
@@ -79,6 +90,7 @@ class GraphicsScene(QGraphicsScene):
     distance_vertical_lines_pen = QPen(Qt.GlobalColor.darkRed, 1, Qt.PenStyle.DashLine)
 
     rect_area: QRectF = QRectF(0, 0, 0, 0)  # FIXME лучше б получать эту арею из вью а не сцены
+    rect_area_once = True
 
     v_line_delta = 150
 
@@ -88,7 +100,8 @@ class GraphicsScene(QGraphicsScene):
         """ wraps self.addItems() method to maintain consistency according scene logic. Means wherever you want to
         use self.addItem() instead use self.objectKeeper.add_obj() """
         super(GraphicsScene, self).__init__()
-        self.object_keeper = ObjectKeeper(lambda x: self.addItem(x))
+        self.object_keeper = ObjectKeeper(lambda x: self.addItem(x),
+                                          lambda x: self.removeItem(x))
 
     def get_rect_area(self) -> QRectF:
         return QRectF(
@@ -106,7 +119,12 @@ class GraphicsScene(QGraphicsScene):
         painter.save()
 
         # save rect for closure call when drawing semi infinte isoropic item
-        self.rect_area = rect
+        if self.rect_area_once:
+            self.rect_area = rect
+            self.rect_area_once = False
+
+        # calculate что--нибудь
+        # self.calculate()
 
         # DRAW DISTANCE-LINES BETWEEN OBJECTS ON THE SCENE
         self.scene_obj_distance_lines = []
@@ -180,11 +198,12 @@ class GraphicsScene(QGraphicsScene):
 
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         self._unfocus_items()
+        self.calculate()
         super(GraphicsScene, self).mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
         # MAKE HOLE IN SEMI_INF_OBSTACLE
-        self.calculate()
+        # self.calculate()
         super(GraphicsScene, self).mouseReleaseEvent(event)
 
     def dragMoveEvent(self, event: QtGui.QDragMoveEvent) -> None:
@@ -200,6 +219,9 @@ class GraphicsScene(QGraphicsScene):
     # def dropEvent(self, event: QtGui.QDropEvent) -> None:
     def dropEvent(self, event: 'QGraphicsSceneDragDropEvent') -> None:
         self._unfocus_items()
+        # self.calculate()  # он не прокалькулирует тк объект при дропе находится вне сцены сцене. те результат
+        # расчета = результату с предыдущем набором объектов
+
         name = event.mimeData().text()
         item = self.item_catalog.get_item(name)
         scene_item = item.get_scene_item()
@@ -218,9 +240,8 @@ class GraphicsScene(QGraphicsScene):
         # 💩 magic code, do not touch:
         # если дропаемый объект это shell:
         if hasattr(scene_item, 'set_props') and callable(scene_item.set_props):
-            # TODO: надо удалять предыдущий шел
             scene_item.set_props()
-            scene_item.closure_updater_f = lambda : self.calculate()  # 💩💩💩
+            scene_item.closure_updater_f = lambda : self.calculate()
             self.object_keeper.add_obj(scene_item)
         else:
             scene_item.set_position(item_pos)
@@ -271,7 +292,7 @@ class GraphicsScene(QGraphicsScene):
             return
 
         armor_objs = self.object_keeper.get_all_obstacles()
-        init_shell = self.object_keeper.get_shell_obj()
+        init_shell = self.object_keeper.get_shell_obj().copy()
 
         for o in armor_objs:
             init_shell = o.calc_jet_impact(init_shell)

@@ -38,7 +38,9 @@ class ERAE_4S20(SceneItemWidget):
     Explosive reactive armor element "4С20"
     """
 
-    def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
+    def __init__(self,
+                 img_dir_path: str,
+                 property_displayer: Callable[[dict], None]):
         super().__init__(title='ЭДЗ 4С20',
                          description='Элемент динамической защиты 4С20',
                          img_path=os.path.join(img_dir_path, '4s20.png'),
@@ -117,7 +119,9 @@ class SHELL_KORNET(SceneItemWidget):
                          column_count=1)
 
 
-def generate_catalog_shield(img_dir_path: str, property_displayer: Callable[[dict], None]) -> list[
+def generate_catalog_shield(img_dir_path: str,
+                            property_displayer: Callable[[dict], None],
+                            ) -> list[
     SceneItemWidget]:
     item_list = [ERA_KONTAKT_1_SQ(img_dir_path, property_displayer),
                  ERA_KONTAKT_1_TR(img_dir_path, property_displayer),

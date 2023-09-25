@@ -27,6 +27,9 @@ class JetShell(ActorInterface, Jet):
         self.property_displayer = property_displayer
         super(JetShell, self).__init__()
 
+    def copy(self):
+        return JetShell(self.property_displayer)
+
     def set_props(self):
         props = self._get_props_dict()
         self.property_displayer(props)

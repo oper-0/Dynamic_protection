@@ -15,6 +15,10 @@ class ActorInterface(ABC):
     def CONST_ITEM_TYPE(self) -> CatalogItemTypes:
         pass
 
+    @abstractmethod
+    def copy(self):
+        pass
+
 
 class SceneActorInterface(ABC):
     """

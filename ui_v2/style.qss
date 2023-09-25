@@ -1,4 +1,5 @@
-QWidget:item:hover {
-    background-color: #3daee9;
-    color: #eff0f1;
+Button {
+    text: qsTr("Button")
+    highlighted: true
+    Material.background: Material.Teal
 }

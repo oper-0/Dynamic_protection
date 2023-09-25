@@ -1,10 +1,11 @@
 import math
 import typing
+import uuid
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF
 from PyQt6.QtGui import  QBrush, QPen, QTransform
-from PyQt6.QtWidgets import QGraphicsItem, QWidget, QLineEdit
+from PyQt6.QtWidgets import QGraphicsItem, QWidget, QLineEdit, QMenu
 
 from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, DoubleSpinBoxMod1
 from ui_v2.infrastructure.helpers import SceneObjProperty, CatalogItemTypes
@@ -59,8 +60,12 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
     # общее свойство для всех объектов сцены
     CONST_ITEM_TYPE = CatalogItemTypes.armor
 
-    def __init__(self, property_displayer: typing.Callable[[dict], None]):
+    _object_name = ""
+
+    def __init__(self,
+                 property_displayer: typing.Callable[[dict], None]):
         super().__init__()
+        self.deleter_fn = None
         self.property_displayer = property_displayer
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
@@ -70,6 +75,8 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         self.line = QLineF(-1,0,1,0)
 
         self.rect = self._get_rect()
+
+        self.set_object_name()
         # self.rect.setFlag
 
     def itemChange(self, change, value):
@@ -99,6 +106,24 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     def boundingRect(self):
         return self.rect
+
+    def contextMenuEvent(self, event: 'QGraphicsSceneContextMenuEvent') -> None:
+        menu = QMenu()
+        action_delete = menu.addAction("❌ Удалить")
+        action_delete.triggered.connect(self.action_delete)
+        menu.exec(event.screenPos())  # Отобразить контекстное меню в позиции щелчка
+
+    def action_delete(self):
+        self.deleter_fn(self)
+
+    def set_deleter(self, delete_fn: typing.Callable[[QGraphicsItem], None]):
+        self.deleter_fn = delete_fn
+
+    def get_object_name(self):
+        return self._object_name
+
+    def set_object_name(self):
+        self._object_name = uuid.uuid4().__str__()
 
     def set_position(self,pos:QPointF):
         # self.position=pos
@@ -134,8 +159,8 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     """Calculator. Общий метод для всех объектов брони на сцене"""
     def calc_jet_impact(self, jet: Jet) -> Jet:
-        if hasattr(jet, "cursor_position"):
-            jet.length.value *= 0.5   # FIXME temp solution
+        # if hasattr(jet, "cursor_position"):
+        jet.length.value *= 0.5   # FIXME temp solution
         return jet
 
     def _get_props_dict(self) -> list[SceneObjProperty]:
