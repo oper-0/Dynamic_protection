@@ -304,10 +304,6 @@ class GraphicsScene(QGraphicsScene):
 
         diameter, depth = self.object_keeper.get_obstacle_obj().calculate_hole(init_shell)
 
-
-        # diameter, depth = calculation_semi_inf_obst(self.object_keeper.get_shell_obj(),
-        #                           self.object_keeper.get_obstacle_obj())
-
         if not self.wrapper_make_hole(diameter/2, depth*1000):  # calculs result displaying
             self.logger('Невозможно произвести расчёт', 'error')
 
@@ -346,10 +342,6 @@ class ControlView(QGraphicsView):
         self.CVScene.logger = logger_fun
         self.CVScene.item_catalog = item_catalog
 
-        # Элемент полу-бесконечной брони
-        # self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElement(
-        #     property_displayer = SemiInfIsotropicElement_property_displayer_fun,
-        #     f_get_scene_rect = self.CVScene.get_rect_area)
         self.semi_inf_isotropic_element = NEW_SemiInfIsotropicElementSimplified(
             property_displayer=SemiInfIsotropicElement_property_displayer_fun,
             f_get_scene_rect=self.CVScene.get_rect_area)
