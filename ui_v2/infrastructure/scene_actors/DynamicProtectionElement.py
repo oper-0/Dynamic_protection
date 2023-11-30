@@ -2,7 +2,7 @@ import typing
 
 from PyQt6.QtCore import QRect, Qt, QPointF, QPoint, QSize, QRectF
 from PyQt6.QtGui import QPainter, QBrush, QPen
-from PyQt6.QtWidgets import QGraphicsItem, QWidget
+from PyQt6.QtWidgets import QGraphicsItem, QWidget, QGraphicsOpacityEffect
 
 from ui_v2.infrastructure.helpers import CatalogItemTypes
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface
@@ -74,6 +74,9 @@ class DynamicProtectionElement(QGraphicsItem):
         # self.position = position
 
         self.highlight_flag = False
+
+        # if item is not fully implemented uncomment next:
+        # self.setGraphicsEffect(QGraphicsOpacityEffect())
 
     def mouseMoveEvent(self, event):
         # print('mouse moving')
@@ -349,6 +352,10 @@ class test_item(QGraphicsItem):
         self.brush = QBrush(Qt.GlobalColor.red)
 
         self.rect = QRectF(QPointF(0,0),QPointF(15,15))
+
+        # if item is not fully implemented uncomment next:
+        # self.setGraphicsEffect(QGraphicsOpacityEffect())
+
 
     def mouseMoveEvent(self, event):
         super(test_item, self).mouseMoveEvent(event)

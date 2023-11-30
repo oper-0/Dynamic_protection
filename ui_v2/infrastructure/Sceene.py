@@ -43,10 +43,14 @@ class ObjectKeeper:
 
         if obj.CONST_ITEM_TYPE == CatalogItemTypes.armor:
             # armor object must have set_deleter() function to delete an object from scene
-            obj.set_deleter(self.deleteItem_callback) # FIXME
+            # obj.set_deleter(self.deleteItem_callback)
+            obj.set_deleter(lambda obj_instance: self.del_obj(self.deleteItem_callback, obj_instance)) # FIXME
 
-    def del_obj(self):
-        ...
+    def del_obj(self,
+                deleteItem_callback: typing.Callable[[QGraphicsItem], None],
+                obj_instance: QGraphicsItem):
+        deleteItem_callback(obj_instance)
+        self._objs = [o for o in self._objs if o != obj_instance]
 
     def get_shell_obj(self):
         for i in self._objs:
@@ -291,6 +295,7 @@ class GraphicsScene(QGraphicsScene):
             self.logger('Невозможно произвести расчёт. Нет выбран снаряд.', 'error')
             return
 
+
         armor_objs = self.object_keeper.get_all_obstacles()
         init_shell = self.object_keeper.get_shell_obj().copy()
 
@@ -371,6 +376,7 @@ class ControlView(QGraphicsView):
 
     def mousePressEvent(self, event):
         # self.CVScene.update()
+
         if event.button() == self.change_pos_mouse_button:
             self.change_pos_mouse_button_pressed = True
             self.last_mouse_pos = event.pos()
@@ -380,7 +386,7 @@ class ControlView(QGraphicsView):
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
         # self.CVScene.update()
         if event.button() == self.change_pos_mouse_button:
-            self.change_pos_mouse_button_pressed =False
+            self.change_pos_mouse_button_pressed = False
 
         super().mouseReleaseEvent(event)
 

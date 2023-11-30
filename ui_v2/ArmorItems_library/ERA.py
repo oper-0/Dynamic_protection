@@ -18,7 +18,8 @@ class ERA_KONTAKT_1_SQ(SceneItemWidget):
         super().__init__(title='Контакт-1',
                          description='Комплекс динамической защиты первого поколения (4С20)',
                          img_path=os.path.join(img_dir_path, 'kontakt-1_squ.png'),
-                         actor=DynamicProtectionElement())  # TODO make protocol for this
+                         actor=DynamicProtectionElement(),
+                         block=True)  # TODO make protocol for this
 
 
 class ERA_KONTAKT_1_TR(SceneItemWidget):
@@ -30,7 +31,8 @@ class ERA_KONTAKT_1_TR(SceneItemWidget):
         super().__init__(title='Контакт-1 (2)',
                          description='Комплекс динамической защиты первого поколения (4С20)',
                          img_path=os.path.join(img_dir_path, 'kontakt-1_tri.png'),
-                         actor=test_item())  # fixme
+                         actor=test_item(),
+                         block=True)  # fixme
 
 
 class ERAE_4S20(SceneItemWidget):
@@ -40,11 +42,12 @@ class ERAE_4S20(SceneItemWidget):
 
     def __init__(self,
                  img_dir_path: str,
-                 property_displayer: Callable[[dict], None]):
+                 property_displayer: Callable[[dict], None],
+                 calc_result_displayer: Callable[[dict], None]):
         super().__init__(title='ЭДЗ 4С20',
                          description='Элемент динамической защиты 4С20',
                          img_path=os.path.join(img_dir_path, '4s20.png'),
-                         actor=NEW_ExplosiveReactiveArmourPlate(property_displayer))
+                         actor=NEW_ExplosiveReactiveArmourPlate(property_displayer, calc_result_displayer))
         # actor=ExplosiveReactiveArmourPlate)
 
 
@@ -56,7 +59,8 @@ class RUBBER_BAR(SceneItemWidget):
     def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
         super().__init__(title='Резина',
                          description='Случайный кусок резины ¯\_(ツ)_/¯. Тестовый item, потом удалить',
-                         img_path=os.path.join(img_dir_path, 'rubber_bar.png'))
+                         img_path=os.path.join(img_dir_path, 'rubber_bar.png'),
+                         block=True)
 
 
 class STEEL_SHEET(SceneItemWidget):
@@ -67,7 +71,8 @@ class STEEL_SHEET(SceneItemWidget):
     def __init__(self, img_dir_path: str, property_displayer: Callable[[dict], None]):
         super().__init__(title='Сталь',
                          description='Случайный кусок стальной пластины ¯\_(ツ)_/¯. Тестовый item, потом удалить',
-                         img_path=os.path.join(img_dir_path, 'steel_sheet.png'))
+                         img_path=os.path.join(img_dir_path, 'steel_sheet.png'),
+                         block=True)
 
 
 class SHELL_JET(SceneItemWidget):
@@ -79,7 +84,8 @@ class SHELL_JET(SceneItemWidget):
                          description='Кумулятивная струя',
                          img_path=os.path.join(img_dir_path, 'JET.png'),
                          column_count=1,
-                         actor=NEW_JetShell(property_displayer))
+                         actor=NEW_JetShell(property_displayer),
+                         block=False)
 
 
 class SHELL_CUSTOMIZABLE(SceneItemWidget):
@@ -92,7 +98,8 @@ class SHELL_CUSTOMIZABLE(SceneItemWidget):
                          description='Снаряд с случайными параметрами',
                          img_path=os.path.join(img_dir_path, 'shell_ghost.png'),
                          column_count=1,
-                         actor=NEW_CustomizableSell(property_displayer))
+                         actor=NEW_CustomizableSell(property_displayer),
+                         block=True)
 
 
 class SHELL_PG_7V(SceneItemWidget):
@@ -104,7 +111,8 @@ class SHELL_PG_7V(SceneItemWidget):
         super().__init__(title='ПГ-7В',
                          description='40-мм выстрел динамо-реактивного типа ПГ-7В с кумулятивной противотанковой гранатой ПГ-7',
                          img_path=os.path.join(img_dir_path, 'PG_7V_v3.png'),
-                         column_count=1)
+                         column_count=1,
+                         block=True)
 
 
 class SHELL_KORNET(SceneItemWidget):
@@ -116,16 +124,18 @@ class SHELL_KORNET(SceneItemWidget):
         super().__init__(title='Корнет',
                          description='противотанковая ракета',
                          img_path=os.path.join(img_dir_path, 'kornet_ptrk.png'),
-                         column_count=1)
+                         column_count=1,
+                         block=True)
 
 
 def generate_catalog_shield(img_dir_path: str,
                             property_displayer: Callable[[dict], None],
+                            calc_result_displayer: Callable[[dict], None],
                             ) -> list[
     SceneItemWidget]:
     item_list = [ERA_KONTAKT_1_SQ(img_dir_path, property_displayer),
                  ERA_KONTAKT_1_TR(img_dir_path, property_displayer),
-                 ERAE_4S20(img_dir_path, property_displayer),
+                 ERAE_4S20(img_dir_path, property_displayer, calc_result_displayer),
                  RUBBER_BAR(img_dir_path, property_displayer),
                  STEEL_SHEET(img_dir_path, property_displayer)]
     return item_list

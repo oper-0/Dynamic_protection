@@ -53,11 +53,11 @@ class SceneItemsCatalog(QWidget):
             return
         self.cur_col += 1
 
-    def test_populate_me(self, img_path: str):
+    def test_populate_me(self, img_path: str, block: bool = False):
         items_count = 50
         itms = []
         for i in range(items_count):
-            itm = SceneItemWidget('test_itm-{}'.format(i), 'this is test item made for debug use', img_path)
+            itm = SceneItemWidget('test_itm-{}'.format(i), 'this is test item made for debug use', img_path, block=block)
             self.add_item(itm)
             itms.append(itm)
         return itms

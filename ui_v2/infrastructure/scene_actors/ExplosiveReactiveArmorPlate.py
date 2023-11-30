@@ -1,20 +1,25 @@
 import math
 import typing
 import uuid
+from dataclasses import dataclass
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF
-from PyQt6.QtGui import  QBrush, QPen, QTransform
+from PyQt6.QtGui import QBrush, QPen, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QWidget, QLineEdit, QMenu
+from calc_modules import explosive_plate_throwing as exp_throw
 
+from calc_modules import calc_hole
+from objects.parametrs import InData, PlPositions
 from ui_v2.infrastructure.cusom_widgets import LabelAndSlider, DoubleSpinBoxMod1
 from ui_v2.infrastructure.helpers import SceneObjProperty, CatalogItemTypes
 from ui_v2.infrastructure.scene_actors.Jet import Jet
 from ui_v2.infrastructure.scene_actors.scene_actor_interface import ActorInterface
 
 
-def NEW_ExplosiveReactiveArmourPlate(property_displayer: typing.Callable[[dict], None]):
-    return lambda :ExplosiveReactiveArmourPlate(property_displayer)
+def NEW_ExplosiveReactiveArmourPlate(property_displayer: typing.Callable[[dict], None],
+                                     calc_result_displayer: typing.Callable[[dict], None]):
+    return lambda: ExplosiveReactiveArmourPlate(property_displayer, calc_result_displayer)
 
 
 class ExplosiveReactiveArmourPlate(QGraphicsItem):
@@ -63,21 +68,26 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
     _object_name = ""
 
     def __init__(self,
-                 property_displayer: typing.Callable[[dict], None]):
+                 property_displayer: typing.Callable[[dict], None],
+                 calc_result_displayer: typing.Callable[[dict], None]):
         super().__init__()
-        self.deleter_fn = None
+        self.deleter_fn: typing.Callable[[QGraphicsItem], None] = lambda arg0: None
         self.property_displayer = property_displayer
+        self.calc_result_displayer = calc_result_displayer
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
 
-        self.line = QLineF(-1,0,1,0)
+        self.line = QLineF(-1, 0, 1, 0)
 
         self.rect = self._get_rect()
 
         self.set_object_name()
         # self.rect.setFlag
+
+        # if item is not fully implemented uncomment next:
+        # self.setGraphicsEffect(QtWidgets.QGraphicsOpacityEffect())
 
     def itemChange(self, change, value):
         if (
@@ -96,6 +106,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         return super().itemChange(change, value)
 
     def mousePressEvent(self, event: 'QGraphicsSceneMouseEvent') -> None:
+
         self._is_focused = True
         props = self._get_props_dict()
         self.property_displayer(props)
@@ -125,7 +136,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
     def set_object_name(self):
         self._object_name = uuid.uuid4().__str__()
 
-    def set_position(self,pos:QPointF):
+    def set_position(self, pos: QPointF):
         # self.position=pos
         # self.setPos(pos)
         print(f"ITEM POSITION IS {pos}")
@@ -133,6 +144,7 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         # self.rect.moveTo(pos)
 
     def paint(self, painter, option, widget: typing.Optional[QWidget] = ...) -> None:
+        self.calc_plate_impact()
         painter.setBrush(self.brush)
         if self._is_focused:
             painter.setPen(self.pen_on_focus)
@@ -143,9 +155,10 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
 
     def unfocus(self):
         self._is_focused = False
+        self.calc_result_displayer({})
 
     def get_half_height(self):
-        return self.rect.height()*math.cos(self._tilt_angle)/2
+        return self.rect.height() * math.cos(self._tilt_angle) / 2
 
     def get_center(self) -> QPointF:
         return QPointF(self.scenePos().x(), 0)
@@ -158,10 +171,68 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
                     self.position.y() + self._element_length / 2))
 
     """Calculator. Общий метод для всех объектов брони на сцене"""
+
     def calc_jet_impact(self, jet: Jet) -> Jet:
-        # if hasattr(jet, "cursor_position"):
-        jet.length.value *= 0.5   # FIXME temp solution
+        # if hasattr(jet, "cursor_position"): jet.length.value *= 0.5 if abs(self._tilt_angle) > 45: jet.length.value
+        # = 0.5 * jet.length.value + abs(0.5 * jet.length.value * math.cos(math.radians(self._tilt_angle))) else:
+        # jet.length.value = 0.5 * jet.length.value + abs(0.5 * jet.length.value * math.sin(math.radians(
+        # self._tilt_angle)))
+
+        jet.length.value = 0.5 * jet.length.value + (
+                0.5 * jet.length.value * math.cos(math.radians(self._tilt_angle)))
+
         return jet
+
+    def calc_plate_impact(self):
+        if not self._is_focused:
+            return
+        # calc plate hole diameter
+        calc_data = {}
+        try:
+            data = InData(coeff_nu=self._empirical_coefficient,  # 4.5,
+                          pl_front_thickness=self._face_plate_thickness,  # 1.5,
+                          angle=self._tilt_angle,  # 68,
+                          pl_front_density=self._face_plate_density,  # 7.85,
+                          pl_lim_fluidity=self._detonation_products_polytropic_index,  # 500,
+                          stream_density=8.96,
+                          stream_dim=45,
+                          stream_velocity=9)
+            hole_diameter = round(calc_hole.do_main(data), 3)
+        except:
+            # calclation error
+            calc_data['диаметр отверстия в пластине [м]'] = "None"
+        else:
+            calc_data['диаметр отверстия в пластине [м]'] = hole_diameter
+
+        # calc face plate load factor
+        try:
+            data = InData(pl_front_thickness=self._face_plate_thickness,  # 1.5,
+                          pl_back_thickness=self._rear_plate_thickness,  # 1.5,
+                          pl_front_density=self._face_plate_density,  # 7.85,
+                          pl_back_density=self._rear_plate_density,  # 7.85,
+                          explosive_layer_height=self._explosive_layer_thickness,  # 10,
+                          explosive_density=self._explosive_density)  # 1.6)
+            load_factor = round(exp_throw._calc_load_factor(data, PlPositions.PL_FRONT), 4)
+        except:
+            calc_data['Коэффициент нагрузки фронтальной пластины'] = "None"
+        else:
+            calc_data['Коэффициент нагрузки фронтальной пластины'] = load_factor
+
+        # calc rear plate load factor
+        try:
+            data = InData(pl_front_thickness=self._face_plate_thickness,  # 1.5,
+                          pl_back_thickness=self._rear_plate_thickness,  # 1.5,
+                          pl_front_density=self._face_plate_density,  # 7.85,
+                          pl_back_density=self._rear_plate_density,  # 7.85,
+                          explosive_layer_height=self._explosive_layer_thickness,  # 10,
+                          explosive_density=self._explosive_density)  # 1.6)
+            load_factor = round(exp_throw._calc_load_factor(data, PlPositions.PL_BACK), 4)
+        except:
+            calc_data['Коэффициент нагрузки тыльной пластины'] = "None"
+        else:
+            calc_data['Коэффициент нагрузки тыльной пластины'] = load_factor
+
+        self.calc_result_displayer(calc_data)
 
     def _get_props_dict(self) -> list[SceneObjProperty]:
 
@@ -213,17 +284,18 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
         wgt_detonation_products_polytropic_index.textChanged.connect(self.set_detonation_products_polytropic_index)
 
         wgt_detonation_product_velocity_parameter_z = QLineEdit(str(self._detonation_product_velocity_parameter_z))
-        wgt_detonation_product_velocity_parameter_z.textChanged.connect(self.set_detonation_product_velocity_parameter_z)
+        wgt_detonation_product_velocity_parameter_z.textChanged.connect(
+            self.set_detonation_product_velocity_parameter_z)
 
         wgt_detonation_product_velocity_parameter_r = QLineEdit(str(self._detonation_product_velocity_parameter_r))
-        wgt_detonation_product_velocity_parameter_r.textChanged.connect(self.set_detonation_product_velocity_parameter_r)
+        wgt_detonation_product_velocity_parameter_r.textChanged.connect(
+            self.set_detonation_product_velocity_parameter_r)
 
         wgt_detonation_pressure = QLineEdit(str(self._detonation_pressure))
         wgt_detonation_pressure.textChanged.connect(self.set_detonation_pressure)
 
         wgt_average_pressure_coefficient = QLineEdit(str(self._average_pressure_coefficient))
         wgt_average_pressure_coefficient.textChanged.connect(self.set_average_pressure_coefficient)
-
 
         result = [
             SceneObjProperty(key='Эмпирический коэффициент [ν]:', widget=wgt_empirical_coefficient),
@@ -232,22 +304,28 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
             SceneObjProperty(key='Угол атаки [θ, град.]:', widget=wgt_tilt_angle),
             SceneObjProperty(key='Плотность лицевой пластины [ρ1, г/см3]', widget=wgt_face_plate_density),
             SceneObjProperty(key='Плотность тыльной пластины [ρ2, г/см3]', widget=wgt_rear_plate_density),
-            SceneObjProperty(key='Динамический предел текучести материала пластин [Q, МПа]', widget=wgt_dynamic_yield_stress),
+            SceneObjProperty(key='Динамический предел текучести материала пластин [Q, МПа]',
+                             widget=wgt_dynamic_yield_stress),
             SceneObjProperty(key='Длина пластины [a, мм]', widget=wgt_element_length),
             SceneObjProperty(key='Ширина пластины [b, мм]', widget=wgt_element_width),
             SceneObjProperty(key='Толщина слоя ВВ [h, мм]', widget=wgt_explosive_layer_thickness),
             SceneObjProperty(key='Плотность ВВ [ρ, г/см3]', widget=wgt_explosive_density),
             SceneObjProperty(key='Скорость детонации заряда ВВ [D, м/с]', widget=wgt_explosive_detonation_velocity),
-            SceneObjProperty(key='Критический диаметр детонации ВВ [dкр, мм]', widget=wgt_explosive_detonation_critical_diameter),
-            SceneObjProperty(key='Показатель политропы продутов детонации [k]', widget=wgt_detonation_products_polytropic_index),
-            SceneObjProperty(key='Распределение z скоростей продуктов детонации [ξz]', widget=wgt_detonation_product_velocity_parameter_z),
-            SceneObjProperty(key='Распределение r скоростей продуктов детонации [ξr]', widget=wgt_detonation_product_velocity_parameter_r),
+            SceneObjProperty(key='Критический диаметр детонации ВВ [dкр, мм]',
+                             widget=wgt_explosive_detonation_critical_diameter),
+            SceneObjProperty(key='Показатель политропы продутов детонации [k]',
+                             widget=wgt_detonation_products_polytropic_index),
+            SceneObjProperty(key='Распределение z скоростей продуктов детонации [ξz]',
+                             widget=wgt_detonation_product_velocity_parameter_z),
+            SceneObjProperty(key='Распределение r скоростей продуктов детонации [ξr]',
+                             widget=wgt_detonation_product_velocity_parameter_r),
             SceneObjProperty(key='Давление детонации [Pн, МПа]', widget=wgt_detonation_pressure),
             SceneObjProperty(key='Коэффициент для среднего давления [σ]', widget=wgt_average_pressure_coefficient)
         ]
         return result
 
     """PROPERTIES"""
+
     def set_empirical_coefficient(self, value):
         self._empirical_coefficient = value
 
@@ -264,7 +342,8 @@ class ExplosiveReactiveArmourPlate(QGraphicsItem):
     def set_tilt_angle(self, value):
         self._tilt_angle = value
         transform = QTransform()
-        transform.translate(self.rect.center().x(), self.rect.center().y()).rotate(value).translate(-self.rect.center().x(), -self.rect.center().y())
+        transform.translate(self.rect.center().x(), self.rect.center().y()).rotate(value).translate(
+            -self.rect.center().x(), -self.rect.center().y())
         self.setTransform(transform)
 
     def set_face_plate_density(self, value):

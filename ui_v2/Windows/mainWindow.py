@@ -10,6 +10,7 @@ from ui_v2.ArmorItems_library.ERA import generate_catalog_shield, generate_catal
 from ui_v2.infrastructure.Sceene import GraphicsScene, ControlView
 from ui_v2.infrastructure.SceneObjects import SceneItemWidget
 from ui_v2.infrastructure.UserLogger import LoggerWidget
+from ui_v2.infrastructure.calc_result_displayer import ResultDisplayer
 from ui_v2.infrastructure.catalogWidget import SceneItemsCatalog
 from ui_v2.infrastructure.helpers import ItemsCollection
 from ui_v2.infrastructure.mulryTabDockArea import DockAreaWidget
@@ -33,6 +34,7 @@ class mainWindow(QMainWindow):
                                         QIcon(os.path.join(self.interactor.paths.abs_icons_dir, 'error_24.png')),
                                         QIcon(os.path.join(self.interactor.paths.abs_icons_dir, 'warn_24.png')),
                                         )
+        self.CALCULATION_RESULT_DISPLAYER = ResultDisplayer()
         self.ControlView = None
         self.PropertyDisplayer = PropertyDisplayer()
         self.ItemsCollection = ItemsCollection()  # Список всех объектов каталога. Для возможности дропа в ControlView
@@ -105,7 +107,8 @@ class mainWindow(QMainWindow):
 
     def _SetBotDockArea(self):
         self.BOT_DOCK_AREA = QDockWidget()
-        dockerWidget = DockAreaWidget(self.USER_LOGGER)
+        # dockerWidget = DockAreaWidget(self.USER_LOGGER)
+        dockerWidget = DockAreaWidget(self.USER_LOGGER, self.CALCULATION_RESULT_DISPLAYER)
 
         layout = QHBoxLayout()
 
@@ -130,11 +133,11 @@ class mainWindow(QMainWindow):
         # lw = QLabel('ITEMS LIBRARY (IMPLEMENT ME!)') #fixme
         # ERA CATALOG
         shield_catalog_wgt = SceneItemsCatalog(column_count=2)
-        catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir, self.PropertyDisplayer.show_property_shield)
+        catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir, self.PropertyDisplayer.show_property_shield, self.CALCULATION_RESULT_DISPLAYER.set_data)
         # catalog_items = generate_catalog_shield(self.interactor.paths.abs_img_dir)
         for i in catalog_items:
             shield_catalog_wgt.add_item(i)
-        test_itms = shield_catalog_wgt.test_populate_me(os.path.join(self.interactor.paths.abs_img_dir, 'question_mark_pink_500.png'))
+        test_itms = shield_catalog_wgt.test_populate_me(os.path.join(self.interactor.paths.abs_img_dir, 'question_mark_pink_500.png'), block=True)
         self.ItemsCollection.add(catalog_items)
         self.ItemsCollection.add(test_itms)
         left_dock_area_tabs.addTab(shield_catalog_wgt, 'Броня')
